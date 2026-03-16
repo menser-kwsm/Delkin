@@ -1,0 +1,7 @@
+/* Specific tweaks for the Elementor modal table */
+.octopart-stock-table {
+    margin-top: 10px;
+}
+.octo-buy-btn:hover {
+    background: #004494 !important;
+}

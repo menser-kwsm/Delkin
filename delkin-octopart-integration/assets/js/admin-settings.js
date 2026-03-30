@@ -22,4 +22,55 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // Handle adding sellers from available to selected
+    $('#delkin-available-sellers').on('click', '.delkin-seller-item', function() {
+        const $item = $(this);
+        const value = $item.data('value');
+        const name = $item.text();
+
+        // Add to selected box
+        $('#delkin-selected-sellers').append(
+            `<div class="delkin-seller-item" data-value="${value}"><span class="delkin-remove-seller">×</span>${name}</div>`
+        );
+
+        // Add to hidden select
+        $('#nexar-approved-sellers-hidden').append(
+            `<option value="${value}" selected>${name}</option>`
+        );
+
+        // Remove from available box
+        $item.remove();
+    });
+
+    // Handle removing sellers from selected back to available
+    $('#delkin-selected-sellers').on('click', '.delkin-remove-seller', function(e) {
+        e.stopPropagation();
+        const $item = $(this).parent();
+        const value = $item.data('value');
+        const name = $item.contents().filter(function() {
+            return this.nodeType === 3; // Text node
+        }).text();
+
+        // Add back to available box
+        $('#delkin-available-sellers').append(
+            `<div class="delkin-seller-item" data-value="${value}">${name}</div>`
+        );
+
+        // Remove from hidden select
+        $(`#nexar-approved-sellers-hidden option[value="${value}"]`).remove();
+
+        // Remove from selected box
+        $item.remove();
+
+        // Sort available sellers list alphabetically
+        const $available = $('#delkin-available-sellers');
+        const $items = $available.children('.delkin-seller-item').get();
+        $items.sort(function(a, b) {
+            return $(a).text().toUpperCase().localeCompare($(b).text().toUpperCase());
+        });
+        $.each($items, function(i, itm) {
+            $available.append(itm);
+        });
+    });
 });

@@ -78,7 +78,7 @@ class Delkin_Octopart_Settings {
 
         add_settings_field(
             'nexar_approved_sellers',
-            'Approved Sellers',
+            'Available Sellers',
             array( $this, 'render_approved_sellers_field' ),
             'delkin-octopart',
             'nexar_general_section'
@@ -126,18 +126,43 @@ class Delkin_Octopart_Settings {
 
         if ( is_wp_error( $all_sellers ) ) {
             echo '<p class="description" style="color: #d63638;">' . esc_html( $all_sellers->get_error_message() ) . ' Please ensure API credentials are correct to load the seller list.</p>';
-            // Fallback to text input or simple list if API fails
             echo '<input type="text" name="nexar_approved_sellers" value="' . esc_attr( implode( ', ', $selected_sellers ) ) . '" class="regular-text">';
             return;
         }
 
-        echo '<select name="nexar_approved_sellers[]" multiple class="regular-text" style="height: 200px;">';
-        foreach ( $all_sellers as $seller ) {
-            $selected = in_array( $seller, $selected_sellers ) ? ' selected' : '';
-            echo '<option value="' . esc_attr( $seller ) . '"' . $selected . '>' . esc_html( $seller ) . '</option>';
+        // Hidden select for actual form submission
+        echo '<select id="nexar-approved-sellers-hidden" name="nexar_approved_sellers[]" multiple style="display:none;">';
+        foreach ( $selected_sellers as $seller ) {
+            echo '<option value="' . esc_attr( $seller ) . '" selected>' . esc_html( $seller ) . '</option>';
         }
         echo '</select>';
-        echo '<p class="description">Hold Ctrl (Windows) or Command (Mac) to select multiple distributors.</p>';
+
+        echo '<div class="delkin-seller-selection-container">';
+
+        // Selected Sellers Box
+        echo '<div class="delkin-seller-box-wrapper">';
+        echo '<strong>Selected Approved Sellers</strong>';
+        echo '<div id="delkin-selected-sellers" class="delkin-seller-box">';
+        foreach ( $selected_sellers as $seller ) {
+            echo '<div class="delkin-seller-item" data-value="' . esc_attr( $seller ) . '"><span class="delkin-remove-seller">×</span>' . esc_html( $seller ) . '</div>';
+        }
+        echo '</div>';
+        echo '</div>';
+
+        // Available Sellers Box
+        echo '<div class="delkin-seller-box-wrapper">';
+        echo '<strong>Available Sellers</strong>';
+        echo '<div id="delkin-available-sellers" class="delkin-seller-box">';
+        foreach ( $all_sellers as $seller ) {
+            if ( ! in_array( $seller, $selected_sellers ) ) {
+                echo '<div class="delkin-seller-item" data-value="' . esc_attr( $seller ) . '">' . esc_html( $seller ) . '</div>';
+            }
+        }
+        echo '</div>';
+        echo '</div>';
+
+        echo '</div>'; // end container
+        echo '<p class="description">Click an available seller to add it. Click the × to remove a selected seller.</p>';
     }
 
     public function ajax_test_connection() {

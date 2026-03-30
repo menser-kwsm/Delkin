@@ -10,6 +10,7 @@ class Delkin_Octopart_Settings {
     public function init() {
         add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'wp_ajax_delkin_test_nexar_api', array( $this, 'ajax_test_connection' ) );
     }
 
     public function add_settings_page() {
@@ -30,8 +31,12 @@ class Delkin_Octopart_Settings {
         // Register Cache Duration (cast to integer for security)
         register_setting( $this->option_group, 'nexar_cache_hours', 'absint' );
 
-        // Register Approved Sellers
-        register_setting( $this->option_group, 'nexar_approved_sellers', 'sanitize_text_field' );
+        // Register Approved Sellers (as an array)
+        register_setting( $this->option_group, 'nexar_approved_sellers', array(
+            'type'              => 'array',
+            'sanitize_callback' => array( $this, 'sanitize_approved_sellers' ),
+            'default'           => array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ),
+        ) );
 
         add_settings_section(
             'nexar_api_section',
@@ -82,6 +87,8 @@ class Delkin_Octopart_Settings {
 
     public function render_api_section_info() {
         echo '<p>Enter your Nexar API credentials below. You can generate these by creating an application in the <a href="https://nexar.com/developer" target="_blank" rel="noopener noreferrer">Nexar Developer Portal</a>.</p>';
+        echo '<button type="button" id="delkin-test-api-btn" class="button button-secondary">Test API Connection</button>';
+        echo '<span id="delkin-test-api-result" style="margin-left: 10px; vertical-align: middle;"></span>';
     }
 
     public function render_client_id_field() {
@@ -101,10 +108,55 @@ class Delkin_Octopart_Settings {
         echo '<p class="description">How long should distributor stock data be saved before asking the API again? (Recommended: 2 to 4 hours). This drastically speeds up load times and prevents API rate-limiting.</p>';
     }
 
+    public function sanitize_approved_sellers( $input ) {
+        if ( ! is_array( $input ) ) {
+            return array();
+        }
+        return array_map( 'sanitize_text_field', $input );
+    }
+
     public function render_approved_sellers_field() {
-        $value = get_option( 'nexar_approved_sellers', 'Arrow Electronics, DigiKey, Farnell, Mouser' );
-        echo '<input type="text" name="nexar_approved_sellers" value="' . esc_attr( $value ) . '" class="regular-text">';
-        echo '<p class="description">Comma-separated list of distributor names to display in the modal. (e.g., Arrow Electronics, DigiKey, Farnell, Mouser)</p>';
+        $selected_sellers = get_option( 'nexar_approved_sellers', array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ) );
+        if ( ! is_array( $selected_sellers ) ) {
+            $selected_sellers = array();
+        }
+
+        $api = new Delkin_Nexar_API();
+        $all_sellers = $api->get_all_sellers();
+
+        if ( is_wp_error( $all_sellers ) ) {
+            echo '<p class="description" style="color: #d63638;">' . esc_html( $all_sellers->get_error_message() ) . ' Please ensure API credentials are correct to load the seller list.</p>';
+            // Fallback to text input or simple list if API fails
+            echo '<input type="text" name="nexar_approved_sellers" value="' . esc_attr( implode( ', ', $selected_sellers ) ) . '" class="regular-text">';
+            return;
+        }
+
+        echo '<select name="nexar_approved_sellers[]" multiple class="regular-text" style="height: 200px;">';
+        foreach ( $all_sellers as $seller ) {
+            $selected = in_array( $seller, $selected_sellers ) ? ' selected' : '';
+            echo '<option value="' . esc_attr( $seller ) . '"' . $selected . '>' . esc_html( $seller ) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="description">Hold Ctrl (Windows) or Command (Mac) to select multiple distributors.</p>';
+    }
+
+    public function ajax_test_connection() {
+        check_ajax_referer( 'delkin_octopart_admin_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+        }
+
+        $api = new Delkin_Nexar_API();
+        $is_connected = $api->test_connection();
+
+        if ( $is_connected ) {
+            // Also clear the sellers transient to force a refresh if they just added keys
+            delete_transient( 'nexar_all_sellers' );
+            wp_send_json_success( array( 'message' => 'Connection successful!' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Connection failed. Please check your Client ID and Secret.' ) );
+        }
     }
 
     public function render_settings_page() {

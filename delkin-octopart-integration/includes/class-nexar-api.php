@@ -50,6 +50,65 @@ class Delkin_Nexar_API {
     }
 
     /**
+     * Tests the API connection by attempting to retrieve an access token.
+     */
+    public function test_connection() {
+        $token = $this->get_access_token();
+        return ! is_wp_error( $token );
+    }
+
+    /**
+     * Fetches all available sellers from the Nexar API.
+     */
+    public function get_all_sellers() {
+        $sellers = get_transient( 'nexar_all_sellers' );
+
+        if ( false === $sellers ) {
+            $token = $this->get_access_token();
+
+            if ( is_wp_error( $token ) ) {
+                return $token;
+            }
+
+            $query = '
+                query Sellers {
+                  supSellers {
+                    name
+                  }
+                }
+            ';
+
+            $response = wp_remote_post( $this->api_url, array(
+                'headers' => array(
+                    'Authorization' => 'Bearer ' . $token,
+                    'Content-Type'  => 'application/json',
+                ),
+                'body' => json_encode( array(
+                    'query' => $query,
+                )),
+                'timeout' => 30
+            ));
+
+            if ( is_wp_error( $response ) ) {
+                return $response;
+            }
+
+            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+            if ( isset( $body['data']['supSellers'] ) ) {
+                $sellers = array_column( $body['data']['supSellers'], 'name' );
+                sort( $sellers );
+                // Cache for 24 hours
+                set_transient( 'nexar_all_sellers', $sellers, DAY_IN_SECONDS );
+            } else {
+                return new WP_Error( 'fetch_sellers_failed', 'Failed to retrieve sellers from Nexar.' );
+            }
+        }
+
+        return $sellers;
+    }
+
+    /**
      * Queries the Nexar GraphQL API for a specific MPN.
      */
     public function get_part_data( $mpn ) {

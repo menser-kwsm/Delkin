@@ -74,7 +74,7 @@ function delkin_octopart_enqueue_admin_scripts( $hook ) {
         'delkin-octopart-admin-js',
         plugins_url( '/assets/js/admin-settings.js', __FILE__ ),
         array( 'jquery' ),
-        '1.0.0',
+        '1.1.0',
         true
     );
 

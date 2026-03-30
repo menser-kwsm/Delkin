@@ -24,14 +24,16 @@ jQuery(document).ready(function($) {
     });
 
     // Handle adding sellers from available to selected
-    $('#delkin-available-sellers').on('click', '.delkin-seller-item', function() {
+    $(document).on('click', '#delkin-available-sellers .delkin-seller-item', function() {
         const $item = $(this);
-        const value = $item.data('value');
-        const name = $item.text();
+        const value = $item.attr('data-value');
+        const name = $item.contents().filter(function() {
+            return this.nodeType === 3;
+        }).text().trim();
 
         // Add to selected box
         $('#delkin-selected-sellers').append(
-            `<div class="delkin-seller-item" data-value="${value}"><span class="delkin-remove-seller">×</span>${name}</div>`
+            `<div class="delkin-seller-item" data-value="${value}"><span class="delkin-remove-seller">×</span> ${name}</div>`
         );
 
         // Add to hidden select
@@ -44,13 +46,13 @@ jQuery(document).ready(function($) {
     });
 
     // Handle removing sellers from selected back to available
-    $('#delkin-selected-sellers').on('click', '.delkin-remove-seller', function(e) {
+    $(document).on('click', '#delkin-selected-sellers .delkin-remove-seller', function(e) {
         e.stopPropagation();
-        const $item = $(this).parent();
-        const value = $item.data('value');
+        const $item = $(this).closest('.delkin-seller-item');
+        const value = $item.attr('data-value');
         const name = $item.contents().filter(function() {
-            return this.nodeType === 3; // Text node
-        }).text();
+            return this.nodeType === 3;
+        }).text().trim();
 
         // Add back to available box
         $('#delkin-available-sellers').append(

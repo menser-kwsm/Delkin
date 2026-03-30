@@ -2,8 +2,9 @@
 /**
  * Plugin Name: Delkin Octopart Integration
  * Description: Integrates WooCommerce with the Nexar (Octopart) API to fetch real-time distributor stock and purchase links.
- * Version: 1.1.0
- * Author: Your Agency Name
+ * Version: 1.2.0
+ * Author: KWSM: a digital marketing agency
+ * Author URI: https://kwsmdigital.com/
  * Text Domain: delkin-octopart
  */
 
@@ -55,3 +56,32 @@ function delkin_octopart_enqueue_scripts() {
     ) );
 }
 add_action( 'wp_enqueue_scripts', 'delkin_octopart_enqueue_scripts' );
+
+// Enqueue admin scripts
+function delkin_octopart_enqueue_admin_scripts( $hook ) {
+    if ( 'settings_page_delkin-octopart' !== $hook ) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'delkin-octopart-admin-js',
+        plugins_url( '/assets/js/admin-settings.js', __FILE__ ),
+        array( 'jquery' ),
+        '1.0.0',
+        true
+    );
+
+    wp_localize_script( 'delkin-octopart-admin-js', 'delkinOctopartAdmin', array(
+        'nonce' => wp_create_nonce( 'delkin_octopart_admin_nonce' )
+    ) );
+}
+add_action( 'admin_enqueue_scripts', 'delkin_octopart_enqueue_admin_scripts' );
+
+// Add settings link on the plugins page
+function delkin_octopart_add_settings_link( $links ) {
+    $settings_link = '<a href="options-general.php?page=delkin-octopart">' . __( 'Settings' ) . '</a>';
+    array_unshift( $links, $settings_link );
+    return $links;
+}
+$plugin = plugin_basename( __FILE__ );
+add_filter( "plugin_action_links_$plugin", 'delkin_octopart_add_settings_link' );

@@ -61,9 +61,11 @@ class Delkin_WP_Endpoints {
     private function format_nexar_response( $raw_data ) {
         $distributors = array();
 
-        // 1. Pull approved sellers from the settings page
-        $approved_sellers_raw = get_option( 'nexar_approved_sellers', 'Arrow Electronics, DigiKey, Farnell, Mouser' );
-        $approved_sellers = array_map( 'trim', explode( ',', $approved_sellers_raw ) );
+        // 1. Pull approved sellers from the settings page (now an array)
+        $approved_sellers = get_option( 'nexar_approved_sellers', array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ) );
+        if ( ! is_array( $approved_sellers ) ) {
+             $approved_sellers = array();
+        }
 
         // Check if we got valid part data back
         if ( empty( $raw_data['data']['supSearch']['results'] ) ) {

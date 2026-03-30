@@ -63,6 +63,13 @@ function delkin_octopart_enqueue_admin_scripts( $hook ) {
         return;
     }
 
+    wp_enqueue_style(
+        'delkin-octopart-admin-css',
+        plugins_url( '/assets/css/admin-styles.css', __FILE__ ),
+        array(),
+        '1.0.0'
+    );
+
     wp_enqueue_script(
         'delkin-octopart-admin-js',
         plugins_url( '/assets/js/admin-settings.js', __FILE__ ),

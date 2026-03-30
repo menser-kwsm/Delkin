@@ -1,5 +1,5 @@
 === Delkin Octopart Integration ===
-Contributors: YourAgencyName
+Contributors: KWSM: a digital marketing agency
 Requires at least: 5.8
 Tested up to: 6.4
 Stable tag: 1.2.0

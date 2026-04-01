@@ -49,13 +49,70 @@ function delkin_octopart_enqueue_scripts() {
         true // Load in footer
     );
 
-    // Localize the script with the REST API URL and a nonce
+    // Localize the script with the REST API URL, nonce, and styling/column settings
     wp_localize_script( 'delkin-octopart-js', 'delkinOctopartData', array(
-        'root'  => esc_url_raw( rest_url() ),
-        'nonce' => wp_create_nonce( 'wp_rest' )
+        'root'    => esc_url_raw( rest_url() ),
+        'nonce'   => wp_create_nonce( 'wp_rest' ),
+        'columns' => get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock')),
+        'styling' => array(
+            'btnText'    => get_option('nexar_button_text', 'Buy Now'),
+            'btnBgColor' => get_option('nexar_button_bg_color', '#02549c'),
+            'btnColor'   => get_option('nexar_button_text_color', '#ffffff'),
+            'btnIcon'    => get_option('nexar_button_icon', ''),
+        )
     ) );
 }
 add_action( 'wp_enqueue_scripts', 'delkin_octopart_enqueue_scripts' );
+
+/**
+ * Renders the "Buy Now" button and modal placeholder on the product page.
+ * Hooked to woocommerce_product_meta_end to appear after Category/SKU.
+ */
+function delkin_octopart_render_buy_button() {
+    global $product;
+    if ( ! $product ) {
+        return;
+    }
+
+    $sku = $product->get_sku();
+    if ( empty( $sku ) ) {
+        return;
+    }
+
+    $btn_text     = get_option('nexar_button_text', 'Buy Now');
+    $btn_bg       = get_option('nexar_button_bg_color', '#02549c');
+    $btn_color    = get_option('nexar_button_text_color', '#ffffff');
+    $btn_icon_raw = get_option('nexar_button_icon', '');
+
+    $btn_icon = '';
+    if ( ! empty( $btn_icon_raw ) ) {
+        if ( strpos( $btn_icon_raw, '<svg' ) !== false ) {
+            $btn_icon = '<span class="delkin-btn-icon">' . $btn_icon_raw . '</span>';
+        } else {
+            $btn_icon = '<span class="delkin-btn-icon dashicons ' . esc_attr( $btn_icon_raw ) . '"></span>';
+        }
+    }
+
+    ?>
+    <div class="delkin-octopart-container">
+        <button type="button" class="delkin-buy-now-btn" data-sku="<?php echo esc_attr( $sku ); ?>" style="background-color: <?php echo esc_attr( $btn_bg ); ?>; color: <?php echo esc_attr( $btn_color ); ?>;">
+            <?php echo $btn_icon; ?>
+            <span class="delkin-btn-text"><?php echo esc_html( $btn_text ); ?></span>
+        </button>
+    </div>
+
+    <!-- Custom Modal Placeholder -->
+    <div id="delkin-octopart-modal" class="delkin-modal">
+        <div class="delkin-modal-content">
+            <span class="delkin-modal-close">&times;</span>
+            <div id="delkin-modal-body">
+                <!-- Table will be injected here -->
+            </div>
+        </div>
+    </div>
+    <?php
+}
+add_action( 'woocommerce_product_meta_end', 'delkin_octopart_render_buy_button' );
 
 // Enqueue admin scripts
 function delkin_octopart_enqueue_admin_scripts( $hook ) {

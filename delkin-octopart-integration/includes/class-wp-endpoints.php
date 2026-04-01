@@ -59,7 +59,7 @@ class Delkin_WP_Endpoints {
      * Flattens the complex GraphQL response and filters for specific distributors.
      */
     private function format_nexar_response( $raw_data ) {
-        $distributors = array();
+        $offers_list = array();
 
         // 1. Pull approved sellers from the settings page (now an array)
         $approved_sellers = get_option( 'nexar_approved_sellers', array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ) );
@@ -69,35 +69,34 @@ class Delkin_WP_Endpoints {
 
         // Check if we got valid part data back
         if ( empty( $raw_data['data']['supSearch']['results'] ) ) {
-            return $distributors; // Returns empty array if part not found
+            return $offers_list; // Returns empty array if part not found
         }
 
-        $sellers = $raw_data['data']['supSearch']['results'][0]['part']['sellers'];
+        foreach ( $raw_data['data']['supSearch']['results'] as $result ) {
+            $part = $result['part'];
+            $mpn = $part['mpn'];
+            $sellers = $part['sellers'];
 
-        foreach ( $sellers as $seller ) {
-            $distributor_name = $seller['company']['name'];
+            foreach ( $sellers as $seller ) {
+                $distributor_name = $seller['company']['name'];
 
-            // 2. Skip any seller that is NOT in our strict approved list
-            if ( ! in_array( $distributor_name, $approved_sellers ) ) {
-                continue;
+                // 2. Skip any seller that is NOT in our strict approved list
+                if ( ! empty( $approved_sellers ) && ! in_array( $distributor_name, $approved_sellers ) ) {
+                    continue;
+                }
+
+                foreach ( $seller['offers'] as $offer ) {
+                    $offers_list[] = array(
+                        'distributor' => $distributor_name,
+                        'mpn'         => $mpn,
+                        'packaging'   => isset($offer['packaging']) ? $offer['packaging'] : 'N/A',
+                        'stock'       => $offer['inventoryLevel'],
+                        'url'         => $offer['clickUrl']
+                    );
+                }
             }
-
-            // Octopart sometimes returns multiple offers per seller, grab the first one
-            $stock = 0;
-            $url = '#';
-
-            if ( ! empty( $seller['offers'] ) ) {
-                $stock = $seller['offers'][0]['inventoryLevel'];
-                $url = $seller['offers'][0]['clickUrl'];
-            }
-
-            $distributors[] = array(
-                'distributor' => $distributor_name,
-                'stock'       => $stock,
-                'url'         => $url
-            );
         }
 
-        return $distributors;
+        return $offers_list;
     }
 }

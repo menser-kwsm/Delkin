@@ -121,7 +121,7 @@ class Delkin_Nexar_API {
         // GraphQL Query tailored to get ONLY authorized sellers
         $query = '
             query Search($mpn: String!) {
-              supSearch(q: $mpn, limit: 1) {
+              supSearch(q: $mpn, limit: 10) {
                 results {
                   part {
                     mpn
@@ -131,6 +131,7 @@ class Delkin_Nexar_API {
                       }
                       offers {
                         inventoryLevel
+                        packaging
                         clickUrl
                       }
                     }

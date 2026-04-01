@@ -24,65 +24,37 @@ class Delkin_Octopart_Settings {
     }
 
     public function register_settings() {
-        // Register API Keys
+        // --- API TAB ---
         register_setting( $this->option_group, 'nexar_client_id', 'sanitize_text_field' );
         register_setting( $this->option_group, 'nexar_client_secret', 'sanitize_text_field' );
-
-        // Register Cache Duration (cast to integer for security)
         register_setting( $this->option_group, 'nexar_cache_hours', 'absint' );
-
-        // Register Approved Sellers (as an array)
         register_setting( $this->option_group, 'nexar_approved_sellers', array(
             'type'              => 'array',
             'sanitize_callback' => array( $this, 'sanitize_approved_sellers' ),
             'default'           => array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ),
         ) );
 
-        add_settings_section(
-            'nexar_api_section',
-            'API Credentials',
-            array( $this, 'render_api_section_info' ),
-            'delkin-octopart'
-        );
+        add_settings_section('nexar_api_section', 'API Credentials', array( $this, 'render_api_section_info' ), 'delkin-octopart-api');
+        add_settings_field('nexar_client_id', 'Client ID', array( $this, 'render_client_id_field' ), 'delkin-octopart-api', 'nexar_api_section');
+        add_settings_field('nexar_client_secret', 'Client Secret', array( $this, 'render_client_secret_field' ), 'delkin-octopart-api', 'nexar_api_section');
 
-        add_settings_field(
-            'nexar_client_id',
-            'Client ID',
-            array( $this, 'render_client_id_field' ),
-            'delkin-octopart',
-            'nexar_api_section'
-        );
+        add_settings_section('nexar_general_section', 'General Configuration', null, 'delkin-octopart-api');
+        add_settings_field('nexar_cache_hours', 'Cache Duration (Hours)', array( $this, 'render_cache_hours_field' ), 'delkin-octopart-api', 'nexar_general_section');
+        add_settings_field('nexar_approved_sellers', 'Available Sellers', array( $this, 'render_approved_sellers_field' ), 'delkin-octopart-api', 'nexar_general_section');
 
-        add_settings_field(
-            'nexar_client_secret',
-            'Client Secret',
-            array( $this, 'render_client_secret_field' ),
-            'delkin-octopart',
-            'nexar_api_section'
-        );
+        // --- STYLING TAB ---
+        register_setting( $this->option_group, 'nexar_button_text', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Buy Now') );
+        register_setting( $this->option_group, 'nexar_button_bg_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
+        register_setting( $this->option_group, 'nexar_button_text_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#ffffff') );
+        register_setting( $this->option_group, 'nexar_button_icon', 'sanitize_textarea_field' ); // Allow SVG
+        register_setting( $this->option_group, 'nexar_table_columns', array('type' => 'array', 'default' => array('distributor', 'mpn', 'packaging', 'stock')) );
 
-        add_settings_section(
-            'nexar_general_section',
-            'General Configuration',
-            null,
-            'delkin-octopart'
-        );
-
-        add_settings_field(
-            'nexar_cache_hours',
-            'Cache Duration (Hours)',
-            array( $this, 'render_cache_hours_field' ),
-            'delkin-octopart',
-            'nexar_general_section'
-        );
-
-        add_settings_field(
-            'nexar_approved_sellers',
-            'Available Sellers',
-            array( $this, 'render_approved_sellers_field' ),
-            'delkin-octopart',
-            'nexar_general_section'
-        );
+        add_settings_section('nexar_styling_section', 'Button & Modal Styling', null, 'delkin-octopart-styling');
+        add_settings_field('nexar_button_text', 'Button Text', array( $this, 'render_text_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text'));
+        add_settings_field('nexar_button_bg_color', 'Button Background Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_bg_color'));
+        add_settings_field('nexar_button_text_color', 'Button Text Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text_color'));
+        add_settings_field('nexar_button_icon', 'Button Icon (SVG or Dashicon class)', array( $this, 'render_icon_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_icon'));
+        add_settings_field('nexar_table_columns', 'Table Columns', array( $this, 'render_columns_field' ), 'delkin-octopart-styling', 'nexar_styling_section');
     }
 
     public function render_api_section_info() {
@@ -184,18 +156,64 @@ class Delkin_Octopart_Settings {
         }
     }
 
+    public function render_text_field($args) {
+        $option = $args['label_for'];
+        $value = get_option($option, 'Buy Now');
+        echo '<input type="text" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '" class="regular-text">';
+    }
+
+    public function render_color_field($args) {
+        $option = $args['label_for'];
+        $default = ($option === 'nexar_button_bg_color') ? '#02549c' : '#ffffff';
+        $value = get_option($option, $default);
+        echo '<input type="text" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '" class="qodef-color-field" data-default-color="' . esc_attr($default) . '">';
+    }
+
+    public function render_icon_field($args) {
+        $option = $args['label_for'];
+        $value = get_option($option, '');
+        echo '<textarea id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" class="large-text" rows="3">' . esc_textarea($value) . '</textarea>';
+        echo '<p class="description">Paste SVG code or enter a WordPress Dashicon class (e.g., dashicons-cart).</p>';
+    }
+
+    public function render_columns_field() {
+        $columns = get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock'));
+        $options = array(
+            'distributor' => 'Distributor',
+            'mpn'         => 'Part Number',
+            'packaging'   => 'Packaging',
+            'stock'       => 'Stock'
+        );
+
+        foreach ($options as $key => $label) {
+            $checked = in_array($key, $columns) ? 'checked' : '';
+            echo '<label><input type="checkbox" name="nexar_table_columns[]" value="' . esc_attr($key) . '" ' . $checked . '> ' . esc_html($label) . '</label><br>';
+        }
+    }
+
     public function render_settings_page() {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
         }
+
+        $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'api';
         ?>
         <div class="wrap">
             <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-            <p>This plugin connects your WooCommerce products to the Octopart supply chain network.</p>
+
+            <h2 class="nav-tab-wrapper">
+                <a href="?page=delkin-octopart&tab=api" class="nav-tab <?php echo $active_tab == 'api' ? 'nav-tab-active' : ''; ?>">Backend API Settings</a>
+                <a href="?page=delkin-octopart&tab=styling" class="nav-tab <?php echo $active_tab == 'styling' ? 'nav-tab-active' : ''; ?>">Front End Styling</a>
+            </h2>
+
             <form action="options.php" method="post">
                 <?php
                 settings_fields( $this->option_group );
-                do_settings_sections( 'delkin-octopart' );
+                if ($active_tab == 'api') {
+                    do_settings_sections( 'delkin-octopart-api' );
+                } else {
+                    do_settings_sections( 'delkin-octopart-styling' );
+                }
                 submit_button();
                 ?>
             </form>

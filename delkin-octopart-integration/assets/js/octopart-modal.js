@@ -1,95 +1,102 @@
 document.addEventListener('DOMContentLoaded', () => {
-    let currentSku = '';
+    const modal = document.getElementById('delkin-octopart-modal');
+    const modalBody = document.getElementById('delkin-modal-body');
+    const closeBtn = document.querySelector('.delkin-modal-close');
 
-    // 1. Listen for clicks on the Buy Now button to capture the SKU
-    // We use event delegation on the body so it works with Elementor's dynamic content
-    document.body.addEventListener('click', (e) => {
-        const triggerBtn = e.target.closest('.trigger-octopart-modal');
+    if (!modal || !modalBody || !closeBtn) return;
+
+    // Handle button click
+    document.addEventListener('click', (e) => {
+        const triggerBtn = e.target.closest('.delkin-buy-now-btn');
         if (triggerBtn) {
-            currentSku = triggerBtn.getAttribute('data-sku');
+            const sku = triggerBtn.getAttribute('data-sku');
+            if (sku) {
+                openModal(sku);
+            }
         }
     });
 
-    // 2. Listen for the Elementor popup to open
-    // Elementor uses jQuery heavily, so we tap into their native popup event
-    if (typeof jQuery !== 'undefined') {
-        jQuery(document).on('elementor/popup/show', (event, id, instance) => {
-            const container = document.getElementById('octopart-table-container');
+    // Close modal
+    closeBtn.onclick = () => {
+        modal.style.display = "none";
+    };
 
-            // If the container isn't in this specific popup, or we don't have a SKU, do nothing
-            if (!container || !currentSku) return;
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
 
-            // 3. Show a loading state inside the modal
-            container.innerHTML = '<div style="text-align:center; padding: 20px;">Fetching live stock data...</div>';
+    function openModal(sku) {
+        modal.style.display = "block";
+        modalBody.innerHTML = '<div style="text-align:center; padding: 20px;">Fetching live stock data...</div>';
 
-            // 4. Fetch the data from our custom WordPress REST API
-            const apiUrl = `${delkinOctopartData.root}delkin/v1/stock/${currentSku}`;
-            fetch(apiUrl, {
-                headers: {
-                    'X-WP-Nonce': delkinOctopartData.nonce
-                }
+        const apiUrl = `${delkinOctopartData.root}delkin/v1/stock/${sku}`;
+        fetch(apiUrl, {
+            headers: {
+                'X-WP-Nonce': delkinOctopartData.nonce
+            }
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
             })
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
-                })
-                .then(data => {
-                    // Handle empty data (no distributors found)
-                    if (!data || data.length === 0) {
-                        container.innerHTML = '<p>No distributors found for this part number.</p>';
-                        return;
-                    }
+            .then(data => {
+                if (!data || data.length === 0) {
+                    modalBody.innerHTML = '<p>No distributors found for this part number.</p>';
+                    return;
+                }
 
-                    // 5. Build the HTML Table
-                    let tableHTML = `
-                        <table class="octopart-stock-table" style="width: 100%; border-collapse: collapse; text-align: left;">
-                            <thead>
-                                <tr style="background: #e9e9e9; border-bottom: 1px solid #ddd;">
-                                    <th style="padding: 10px;">Distributor</th>
-                                    <th style="padding: 10px;">Stock</th>
-                                    <th style="padding: 10px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
+                const columns = delkinOctopartData.columns; // array e.g. ['distributor', 'mpn', 'packaging', 'stock']
 
-                    data.forEach(item => {
-                        const stockText = item.stock > 0 ? item.stock : '0';
+                let tableHTML = `
+                    <div class="delkin-modal-header">
+                        <h3>Silicon Labs Authorized Distributors</h3>
+                        <p>Device: <span style="color: #02549c; font-weight: bold;">${sku}</span></p>
+                    </div>
+                    <table class="octopart-stock-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: #e9e9e9; border-bottom: 1px solid #ddd;">
+                `;
 
-                        // Disable the button if stock is 0
-                        const buyButton = item.stock > 0
-                            ? `<a href="${item.url}" target="_blank" class="octo-buy-btn" style="display:inline-block; padding:8px 16px; background:#0056b3; color:#fff; text-decoration:none; border-radius:4px;">Buy</a>`
-                            : `<button disabled class="octo-buy-btn disabled" style="padding:8px 16px; background:#ccc; color:#666; border:none; border-radius:4px; cursor:not-allowed;">Buy</button>`;
+                // Add Table Headers based on settings
+                if (columns.includes('distributor')) tableHTML += '<th style="padding: 10px;">Distributor</th>';
+                if (columns.includes('mpn'))         tableHTML += '<th style="padding: 10px;">Part Number</th>';
+                if (columns.includes('packaging'))   tableHTML += '<th style="padding: 10px;">Packaging</th>';
+                if (columns.includes('stock'))       tableHTML += '<th style="padding: 10px;">Stock</th>';
+                tableHTML += '<th style="padding: 10px;"></th>'; // Buy button column
 
-                        // Escape values to prevent XSS
-                        const distributorEscaped = document.createElement('div');
-                        distributorEscaped.textContent = item.distributor;
-
-                        tableHTML += `
-                            <tr style="border-bottom: 1px solid #ddd;">
-                                <td style="padding: 10px;">${distributorEscaped.innerHTML}</td>
-                                <td style="padding: 10px;">${stockText}</td>
-                                <td style="padding: 10px; text-align: right;">${buyButton}</td>
+                tableHTML += `
                             </tr>
-                        `;
-                    });
+                        </thead>
+                        <tbody>
+                `;
 
-                    tableHTML += `</tbody></table>`;
+                data.forEach(item => {
+                    const stockText = item.stock > 0 ? item.stock : '0';
+                    const buyButton = item.stock > 0
+                        ? `<a href="${item.url}" target="_blank" class="octo-buy-btn" style="display:inline-block; padding:8px 16px; background:#02549c; color:#fff; text-decoration:none; border-radius:4px;">Buy</a>`
+                        : `<button disabled class="octo-buy-btn disabled" style="padding:8px 16px; background:#ccc; color:#666; border:none; border-radius:4px; cursor:not-allowed;">Buy</button>`;
 
-                    // Add the "Powered by" footer from the design
-                    tableHTML += `
-                        <div style="margin-top: 15px; font-size: 11px; color: #777;">
-                            Powered by <strong>Nexar</strong>
-                        </div>
-                    `;
+                    // Escape distributor for safety
+                    const distributorEscaped = document.createElement('div');
+                    distributorEscaped.textContent = item.distributor;
 
-                    // 6. Inject the table into the Elementor modal
-                    container.innerHTML = tableHTML;
-                })
-                .catch(error => {
-                    console.error('Error fetching Octopart data:', error);
-                    container.innerHTML = '<p>Error loading stock data. Please try again later.</p>';
+                    tableHTML += `<tr style="border-bottom: 1px solid #ddd;">`;
+                    if (columns.includes('distributor')) tableHTML += `<td style="padding: 10px;">${distributorEscaped.innerHTML}</td>`;
+                    if (columns.includes('mpn'))         tableHTML += `<td style="padding: 10px;">${item.mpn}</td>`;
+                    if (columns.includes('packaging'))   tableHTML += `<td style="padding: 10px;">${item.packaging}</td>`;
+                    if (columns.includes('stock'))       tableHTML += `<td style="padding: 10px;">${stockText}</td>`;
+                    tableHTML += `<td style="padding: 10px; text-align: right;">${buyButton}</td>`;
+                    tableHTML += `</tr>`;
                 });
-        });
+
+                tableHTML += `</tbody></table>`;
+                modalBody.innerHTML = tableHTML;
+            })
+            .catch(error => {
+                console.error('Error fetching Octopart data:', error);
+                modalBody.innerHTML = '<p>Error loading stock data. Please try again later.</p>';
+            });
     }
 });

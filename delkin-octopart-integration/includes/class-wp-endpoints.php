@@ -26,7 +26,8 @@ class Delkin_WP_Endpoints {
 
     public function get_stock_data( WP_REST_Request $request ) {
         $sku = sanitize_text_field( $request->get_param( 'sku' ) );
-        $transient_key = 'delkin_stock_' . $sku;
+        // V2 transient key to clear old cached data formats
+        $transient_key = 'delkin_stock_v2_' . $sku;
 
         // 1. Check if we have a cached response for this SKU
         $cached_data = get_transient( $transient_key );
@@ -61,6 +62,11 @@ class Delkin_WP_Endpoints {
     private function format_nexar_response( $raw_data ) {
         $offers_list = array();
 
+        // Check for common API error responses
+        if ( ! isset( $raw_data['data']['supSearch']['results'] ) || ! is_array( $raw_data['data']['supSearch']['results'] ) ) {
+            return $offers_list;
+        }
+
         // 1. Pull approved sellers from the settings page (now an array)
         $approved_sellers = get_option( 'nexar_approved_sellers', array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ) );
         if ( ! is_array( $approved_sellers ) ) {
@@ -78,6 +84,7 @@ class Delkin_WP_Endpoints {
             $sellers = $part['sellers'];
 
             foreach ( $sellers as $seller ) {
+                if ( ! isset( $seller['company']['name'] ) ) continue;
                 $distributor_name = $seller['company']['name'];
 
                 // 2. Skip any seller that is NOT in our strict approved list
@@ -85,13 +92,15 @@ class Delkin_WP_Endpoints {
                     continue;
                 }
 
+                if ( ! isset($seller['offers']) || ! is_array($seller['offers']) ) continue;
+
                 foreach ( $seller['offers'] as $offer ) {
                     $offers_list[] = array(
                         'distributor' => $distributor_name,
                         'mpn'         => $mpn,
-                        'packaging'   => isset($offer['packaging']) ? $offer['packaging'] : 'N/A',
-                        'stock'       => $offer['inventoryLevel'],
-                        'url'         => $offer['clickUrl']
+                        'packaging'   => (isset($offer['packaging']) && !empty($offer['packaging'])) ? $offer['packaging'] : 'N/A',
+                        'stock'       => isset($offer['inventoryLevel']) ? (int) $offer['inventoryLevel'] : 0,
+                        'url'         => isset($offer['clickUrl']) ? $offer['clickUrl'] : '#'
                     );
                 }
             }

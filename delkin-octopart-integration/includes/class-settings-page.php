@@ -5,7 +5,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Delkin_Octopart_Settings {
 
-    private $option_group = 'delkin_octopart_settings_group';
+    private $api_option_group = 'delkin_octopart_api_group';
+    private $styling_option_group = 'delkin_octopart_styling_group';
 
     public function init() {
         add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
@@ -25,10 +26,10 @@ class Delkin_Octopart_Settings {
 
     public function register_settings() {
         // --- API TAB ---
-        register_setting( $this->option_group, 'nexar_client_id', 'sanitize_text_field' );
-        register_setting( $this->option_group, 'nexar_client_secret', 'sanitize_text_field' );
-        register_setting( $this->option_group, 'nexar_cache_hours', 'absint' );
-        register_setting( $this->option_group, 'nexar_approved_sellers', array(
+        register_setting( $this->api_option_group, 'nexar_client_id', 'sanitize_text_field' );
+        register_setting( $this->api_option_group, 'nexar_client_secret', 'sanitize_text_field' );
+        register_setting( $this->api_option_group, 'nexar_cache_hours', 'absint' );
+        register_setting( $this->api_option_group, 'nexar_approved_sellers', array(
             'type'              => 'array',
             'sanitize_callback' => array( $this, 'sanitize_approved_sellers' ),
             'default'           => array( 'Arrow Electronics', 'DigiKey', 'Farnell', 'Mouser' ),
@@ -43,13 +44,13 @@ class Delkin_Octopart_Settings {
         add_settings_field('nexar_approved_sellers', 'Available Sellers', array( $this, 'render_approved_sellers_field' ), 'delkin-octopart-api', 'nexar_general_section');
 
         // --- STYLING TAB ---
-        register_setting( $this->option_group, 'nexar_button_text', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Buy Now') );
-        register_setting( $this->option_group, 'nexar_modal_title', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Delkin Authorized Distributors') );
-        register_setting( $this->option_group, 'nexar_display_mode', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'overlay') );
-        register_setting( $this->option_group, 'nexar_button_bg_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
-        register_setting( $this->option_group, 'nexar_button_text_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#ffffff') );
-        register_setting( $this->option_group, 'nexar_button_icon', 'sanitize_textarea_field' ); // Allow SVG
-        register_setting( $this->option_group, 'nexar_table_columns', array('type' => 'array', 'default' => array('distributor', 'mpn', 'packaging', 'stock')) );
+        register_setting( $this->styling_option_group, 'nexar_button_text', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Buy Now') );
+        register_setting( $this->styling_option_group, 'nexar_modal_title', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Delkin Authorized Distributors') );
+        register_setting( $this->styling_option_group, 'nexar_display_mode', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'overlay') );
+        register_setting( $this->styling_option_group, 'nexar_button_bg_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
+        register_setting( $this->styling_option_group, 'nexar_button_text_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#ffffff') );
+        register_setting( $this->styling_option_group, 'nexar_button_icon', 'sanitize_textarea_field' ); // Allow SVG
+        register_setting( $this->styling_option_group, 'nexar_table_columns', array('type' => 'array', 'default' => array('distributor', 'mpn', 'packaging', 'stock')) );
 
         add_settings_section('nexar_styling_section', 'Button & Modal Styling', null, 'delkin-octopart-styling');
         add_settings_field('nexar_button_text', 'Button Text', array( $this, 'render_text_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text'));
@@ -164,6 +165,12 @@ class Delkin_Octopart_Settings {
         $option = $args['label_for'];
         $default = ($option === 'nexar_modal_title') ? 'Delkin Authorized Distributors' : 'Buy Now';
         $value = get_option($option, $default);
+
+        // Match the robust fallback logic used in the main plugin
+        if ( empty($value) || ! is_string($value) || trim($value) === '' ) {
+            $value = $default;
+        }
+
         echo '<input type="text" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '" class="regular-text">';
     }
 
@@ -183,6 +190,11 @@ class Delkin_Octopart_Settings {
         $option = $args['label_for'];
         $default = ($option === 'nexar_button_bg_color') ? '#02549c' : '#ffffff';
         $value = get_option($option, $default);
+
+        if ( empty($value) || ! is_string($value) || trim($value) === '' ) {
+            $value = $default;
+        }
+
         echo '<input type="text" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '" class="qodef-color-field" data-default-color="' . esc_attr($default) . '">';
     }
 
@@ -225,10 +237,11 @@ class Delkin_Octopart_Settings {
 
             <form action="options.php" method="post">
                 <?php
-                settings_fields( $this->option_group );
                 if ($active_tab == 'api') {
+                    settings_fields( $this->api_option_group );
                     do_settings_sections( 'delkin-octopart-api' );
                 } else {
+                    settings_fields( $this->styling_option_group );
                     do_settings_sections( 'delkin-octopart-styling' );
                 }
                 submit_button();

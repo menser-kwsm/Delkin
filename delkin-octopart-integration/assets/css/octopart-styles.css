@@ -83,6 +83,11 @@
 .octopart-stock-table {
     margin-top: 10px;
     font-size: 14px;
+    border: 1px solid #ddd;
+}
+.octopart-stock-table th,
+.octopart-stock-table td {
+    border: 1px solid #ddd;
 }
 .octo-buy-btn {
     transition: background 0.2s;

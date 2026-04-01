@@ -49,9 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const columns = delkinOctopartData.columns; // array e.g. ['distributor', 'mpn', 'packaging', 'stock']
 
+                const modalTitle = delkinOctopartData.styling.modalTitle || 'Authorized Distributors';
                 let tableHTML = `
                     <div class="delkin-modal-header">
-                        <h3>Silicon Labs Authorized Distributors</h3>
+                        <h3>${modalTitle}</h3>
                         <p>Device: <span style="color: #02549c; font-weight: bold;">${sku}</span></p>
                     </div>
                     <table class="octopart-stock-table" style="width: 100%; border-collapse: collapse; text-align: left;">

@@ -3,33 +3,67 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBody = document.getElementById('delkin-modal-body');
     const closeBtn = document.querySelector('.delkin-modal-close');
 
-    if (!modal || !modalBody || !closeBtn) return;
-
     // Handle button click
     document.addEventListener('click', (e) => {
         const triggerBtn = e.target.closest('.delkin-buy-now-btn');
         if (triggerBtn) {
             const sku = triggerBtn.getAttribute('data-sku');
             if (sku) {
-                openModal(sku);
+                const displayMode = delkinOctopartData.displayMode || 'overlay';
+                if (displayMode === 'inline') {
+                    // Sanitize SKU to match the ID generated in PHP (using sanitize_title)
+                    // JS equivalent of sanitize_title is roughly lowercase and replace non-alphanumeric with -
+                    const sanitizedSku = sku.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                    const inlineContainer = document.getElementById(`delkin-inline-results-${sanitizedSku}`);
+                    if (inlineContainer) {
+                        openResults(sku, inlineContainer);
+                    } else {
+                        // Fallback if specific ID not found
+                        const container = triggerBtn.nextElementSibling;
+                        if (container && container.classList.contains('delkin-inline-results')) {
+                            openResults(sku, container);
+                        }
+                    }
+                } else {
+                    if (modal && modalBody) {
+                        openResults(sku, modalBody, modal);
+                    }
+                }
             }
         }
     });
 
     // Close modal
-    closeBtn.onclick = () => {
-        modal.style.display = "none";
-    };
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            modal.style.setProperty('display', 'none', 'important');
+        };
+    }
 
     window.onclick = (event) => {
         if (event.target == modal) {
-            modal.style.display = "none";
+            modal.style.setProperty('display', 'none', 'important');
         }
     };
 
-    function openModal(sku) {
-        modal.style.display = "block";
-        modalBody.innerHTML = '<div style="text-align:center; padding: 20px;">Fetching live stock data...</div>';
+    // Handle close for inline results (using event delegation)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.delkin-inline-close')) {
+            const container = e.target.closest('.delkin-inline-results');
+            if (container) {
+                container.style.setProperty('display', 'none', 'important');
+            }
+        }
+    });
+
+    function openResults(sku, container, modalElement = null) {
+        if (modalElement) {
+            modalElement.style.setProperty('display', 'block', 'important');
+        } else {
+            container.style.setProperty('display', 'block', 'important');
+        }
+
+        container.innerHTML = '<div style="text-align:center; padding: 20px;">Fetching live stock data...</div>';
 
         const apiUrl = `${delkinOctopartData.root}delkin/v1/stock/${sku}`;
         fetch(apiUrl, {
@@ -43,61 +77,67 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .then(data => {
                 if (!data || data.length === 0) {
-                    modalBody.innerHTML = '<p>No distributors found for this part number.</p>';
+                    container.innerHTML = '<p style="padding: 20px; text-align: center;">No distributors found for this part number.</p>';
                     return;
                 }
 
-                const columns = delkinOctopartData.columns; // array e.g. ['distributor', 'mpn', 'packaging', 'stock']
+                const columns = delkinOctopartData.columns;
+                const modalTitle = delkinOctopartData.styling.modalTitle || 'Delkin Authorized Distributors';
+                const isInline = !modalElement;
 
-                const modalTitle = delkinOctopartData.styling.modalTitle || 'Authorized Distributors';
-                let tableHTML = `
-                    <div class="delkin-modal-header">
+                let tableHTML = '';
+
+                if (isInline) {
+                    tableHTML += `<span class="delkin-inline-close">&times;</span>`;
+                }
+
+                tableHTML += `
+                    <div class="delkin-results-header">
                         <h3>${modalTitle}</h3>
                         <p>Device: <span style="color: #02549c; font-weight: bold;">${sku}</span></p>
                     </div>
-                    <table class="octopart-stock-table" style="width: 100%; border-collapse: collapse; text-align: left;">
-                        <thead>
-                            <tr style="background: #e9e9e9; border-bottom: 1px solid #ddd;">
+                    <div class="delkin-table-wrapper">
+                        <table class="octopart-stock-table">
+                            <thead>
+                                <tr>
                 `;
 
-                // Add Table Headers based on settings
-                if (columns.includes('distributor')) tableHTML += '<th style="padding: 10px;">Distributor</th>';
-                if (columns.includes('mpn'))         tableHTML += '<th style="padding: 10px;">Part Number</th>';
-                if (columns.includes('packaging'))   tableHTML += '<th style="padding: 10px;">Packaging</th>';
-                if (columns.includes('stock'))       tableHTML += '<th style="padding: 10px;">Stock</th>';
-                tableHTML += '<th style="padding: 10px;"></th>'; // Buy button column
+                if (columns.includes('distributor')) tableHTML += '<th>Distributor</th>';
+                if (columns.includes('mpn'))         tableHTML += '<th>Part Number</th>';
+                if (columns.includes('packaging'))   tableHTML += '<th>Packaging</th>';
+                if (columns.includes('stock'))       tableHTML += '<th>Stock</th>';
+                tableHTML += '<th></th>';
 
                 tableHTML += `
-                            </tr>
-                        </thead>
-                        <tbody>
+                                </tr>
+                            </thead>
+                            <tbody>
                 `;
 
                 data.forEach(item => {
                     const stockText = item.stock > 0 ? item.stock : '0';
                     const buyButton = item.stock > 0
-                        ? `<a href="${item.url}" target="_blank" class="octo-buy-btn" style="display:inline-block; padding:8px 16px; background:#02549c; color:#fff; text-decoration:none; border-radius:4px;">Buy</a>`
-                        : `<button disabled class="octo-buy-btn disabled" style="padding:8px 16px; background:#ccc; color:#666; border:none; border-radius:4px; cursor:not-allowed;">Buy</button>`;
+                        ? `<a href="${item.url}" target="_blank" class="octo-buy-btn" style="background-color: ${delkinOctopartData.styling.btnBgColor}; color: ${delkinOctopartData.styling.btnColor};">Buy</a>`
+                        : `<button disabled class="octo-buy-btn disabled">Buy</button>`;
 
-                    // Escape distributor for safety
                     const distributorEscaped = document.createElement('div');
                     distributorEscaped.textContent = item.distributor;
 
-                    tableHTML += `<tr style="border-bottom: 1px solid #ddd;">`;
-                    if (columns.includes('distributor')) tableHTML += `<td style="padding: 10px;">${distributorEscaped.innerHTML}</td>`;
-                    if (columns.includes('mpn'))         tableHTML += `<td style="padding: 10px;">${item.mpn}</td>`;
-                    if (columns.includes('packaging'))   tableHTML += `<td style="padding: 10px;">${item.packaging}</td>`;
-                    if (columns.includes('stock'))       tableHTML += `<td style="padding: 10px;">${stockText}</td>`;
-                    tableHTML += `<td style="padding: 10px; text-align: right;">${buyButton}</td>`;
+                    tableHTML += `<tr>`;
+                    if (columns.includes('distributor')) tableHTML += `<td>${distributorEscaped.innerHTML}</td>`;
+                    if (columns.includes('mpn'))         tableHTML += `<td>${item.mpn}</td>`;
+                    if (columns.includes('packaging'))   tableHTML += `<td>${item.packaging}</td>`;
+                    if (columns.includes('stock'))       tableHTML += `<td>${stockText}</td>`;
+                    tableHTML += `<td style="text-align: right;">${buyButton}</td>`;
                     tableHTML += `</tr>`;
                 });
 
-                tableHTML += `</tbody></table>`;
-                modalBody.innerHTML = tableHTML;
+                tableHTML += `</tbody></table></div>`;
+                container.innerHTML = tableHTML;
             })
             .catch(error => {
                 console.error('Error fetching Octopart data:', error);
-                modalBody.innerHTML = '<p>Error loading stock data. Please try again later.</p>';
+                container.innerHTML = '<p style="padding: 20px; text-align: center;">Error loading stock data. Please try again later.</p>';
             });
     }
 });

@@ -6,10 +6,10 @@ Stable tag: 1.4.0
 Requires PHP: 7.4
 License: GPLv2 or later
 
-Integrates WooCommerce products with the Nexar (Octopart) GraphQL API to display real-time distributor stock and purchase links via an Elementor modal.
+Integrates WooCommerce products with the Nexar (Octopart) GraphQL API to display real-time distributor stock and purchase links via an overlay modal or inline display.
 
 == Description ==
-This plugin registers a custom secure REST API endpoint (`/wp-json/delkin/v1/stock/<sku>`) that your frontend Elementor UI can query.
+This plugin registers a custom secure REST API endpoint (`/wp-json/delkin/v1/stock/<sku>`) that your frontend can query.
 
 It handles the OAuth2 authentication with Nexar securely on the backend, executes the necessary GraphQL query to fetch distributor pricing/stock for a specific MPN (Manufacturer Part Number), and uses WordPress Transients to cache the results for 2 hours to prevent API rate-limiting and improve page load speeds.
 

@@ -207,6 +207,12 @@ class Delkin_Octopart_Settings {
 
     public function render_columns_field() {
         $columns = get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock'));
+
+        // Safety check to ensure $columns is an array
+        if ( ! is_array( $columns ) ) {
+            $columns = array('distributor', 'mpn', 'packaging', 'stock');
+        }
+
         $options = array(
             'distributor' => 'Distributor',
             'mpn'         => 'Part Number',

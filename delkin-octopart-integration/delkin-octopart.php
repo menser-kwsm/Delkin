@@ -74,8 +74,9 @@ function delkin_octopart_script_loader_tag( $tag, $handle, $src ) {
         return $tag;
     }
 
-    // Add data-rocketasync="false" and data-nowprocket="true" to the script tag
-    return str_replace( ' src', ' data-rocketasync="false" data-nowprocket="true" src', $tag );
+    // Add attributes to exclude the script from WP Rocket optimization
+    $attributes = ' data-rocketasync="false" data-nowprocket="true" data-no-optimize="1" data-no-defer="1" data-no-minify="1"';
+    return str_replace( ' src', $attributes . ' src', $tag );
 }
 add_filter( 'script_loader_tag', 'delkin_octopart_script_loader_tag', 10, 3 );
 

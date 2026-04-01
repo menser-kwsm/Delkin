@@ -44,6 +44,7 @@ class Delkin_Octopart_Settings {
 
         // --- STYLING TAB ---
         register_setting( $this->option_group, 'nexar_button_text', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Buy Now') );
+        register_setting( $this->option_group, 'nexar_modal_title', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Authorized Distributors') );
         register_setting( $this->option_group, 'nexar_button_bg_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
         register_setting( $this->option_group, 'nexar_button_text_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#ffffff') );
         register_setting( $this->option_group, 'nexar_button_icon', 'sanitize_textarea_field' ); // Allow SVG
@@ -51,6 +52,7 @@ class Delkin_Octopart_Settings {
 
         add_settings_section('nexar_styling_section', 'Button & Modal Styling', null, 'delkin-octopart-styling');
         add_settings_field('nexar_button_text', 'Button Text', array( $this, 'render_text_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text'));
+        add_settings_field('nexar_modal_title', 'Modal Title', array( $this, 'render_text_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_modal_title'));
         add_settings_field('nexar_button_bg_color', 'Button Background Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_bg_color'));
         add_settings_field('nexar_button_text_color', 'Button Text Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text_color'));
         add_settings_field('nexar_button_icon', 'Button Icon (SVG or Dashicon class)', array( $this, 'render_icon_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_icon'));

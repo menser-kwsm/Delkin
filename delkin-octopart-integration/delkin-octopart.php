@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Delkin Octopart Integration
  * Description: Integrates WooCommerce with the Nexar (Octopart) API to fetch real-time distributor stock and purchase links.
- * Version: 1.2.0
+ * Version: 1.4.0
  * Author: KWSM: a digital marketing agency
  * Author URI: https://kwsmdigital.com/
  * Text Domain: delkin-octopart
@@ -38,14 +38,14 @@ function delkin_octopart_enqueue_scripts() {
         'delkin-octopart-css',
         plugins_url( '/assets/css/octopart-styles.css', __FILE__ ),
         array(),
-        '1.0.0'
+        '1.2.0'
     );
 
     wp_enqueue_script(
         'delkin-octopart-js',
         plugins_url( '/assets/js/octopart-modal.js', __FILE__ ),
-        array( 'jquery' ), // Depend on jQuery since Elementor's popup event requires it
-        '1.1.0',
+        array( 'jquery' ),
+        '1.2.0',
         true // Load in footer
     );
 
@@ -56,6 +56,7 @@ function delkin_octopart_enqueue_scripts() {
         'columns' => get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock')),
         'styling' => array(
             'btnText'    => get_option('nexar_button_text', 'Buy Now'),
+            'modalTitle' => get_option('nexar_modal_title', 'Authorized Distributors'),
             'btnBgColor' => get_option('nexar_button_bg_color', '#02549c'),
             'btnColor'   => get_option('nexar_button_text_color', '#ffffff'),
             'btnIcon'    => get_option('nexar_button_icon', ''),
@@ -100,9 +101,17 @@ function delkin_octopart_render_buy_button() {
             <span class="delkin-btn-text"><?php echo esc_html( $btn_text ); ?></span>
         </button>
     </div>
+    <?php
+}
+add_action( 'woocommerce_product_meta_end', 'delkin_octopart_render_buy_button' );
 
+/**
+ * Renders the modal HTML in the footer to avoid layout issues.
+ */
+function delkin_octopart_render_modal() {
+    ?>
     <!-- Custom Modal Placeholder -->
-    <div id="delkin-octopart-modal" class="delkin-modal">
+    <div id="delkin-octopart-modal" class="delkin-modal" style="display: none;">
         <div class="delkin-modal-content">
             <span class="delkin-modal-close">&times;</span>
             <div id="delkin-modal-body">
@@ -112,7 +121,7 @@ function delkin_octopart_render_buy_button() {
     </div>
     <?php
 }
-add_action( 'woocommerce_product_meta_end', 'delkin_octopart_render_buy_button' );
+add_action( 'wp_footer', 'delkin_octopart_render_modal' );
 
 // Enqueue admin scripts
 function delkin_octopart_enqueue_admin_scripts( $hook ) {

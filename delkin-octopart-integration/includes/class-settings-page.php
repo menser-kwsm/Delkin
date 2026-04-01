@@ -44,7 +44,8 @@ class Delkin_Octopart_Settings {
 
         // --- STYLING TAB ---
         register_setting( $this->option_group, 'nexar_button_text', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Buy Now') );
-        register_setting( $this->option_group, 'nexar_modal_title', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Authorized Distributors') );
+        register_setting( $this->option_group, 'nexar_modal_title', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'Delkin Authorized Distributors') );
+        register_setting( $this->option_group, 'nexar_display_mode', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'overlay') );
         register_setting( $this->option_group, 'nexar_button_bg_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
         register_setting( $this->option_group, 'nexar_button_text_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#ffffff') );
         register_setting( $this->option_group, 'nexar_button_icon', 'sanitize_textarea_field' ); // Allow SVG
@@ -53,6 +54,7 @@ class Delkin_Octopart_Settings {
         add_settings_section('nexar_styling_section', 'Button & Modal Styling', null, 'delkin-octopart-styling');
         add_settings_field('nexar_button_text', 'Button Text', array( $this, 'render_text_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text'));
         add_settings_field('nexar_modal_title', 'Modal Title', array( $this, 'render_text_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_modal_title'));
+        add_settings_field('nexar_display_mode', 'Display Mode', array( $this, 'render_display_mode_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_display_mode'));
         add_settings_field('nexar_button_bg_color', 'Button Background Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_bg_color'));
         add_settings_field('nexar_button_text_color', 'Button Text Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text_color'));
         add_settings_field('nexar_button_icon', 'Button Icon (SVG or Dashicon class)', array( $this, 'render_icon_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_icon'));
@@ -160,8 +162,21 @@ class Delkin_Octopart_Settings {
 
     public function render_text_field($args) {
         $option = $args['label_for'];
-        $value = get_option($option, 'Buy Now');
+        $default = ($option === 'nexar_modal_title') ? 'Delkin Authorized Distributors' : 'Buy Now';
+        $value = get_option($option, $default);
         echo '<input type="text" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="' . esc_attr($value) . '" class="regular-text">';
+    }
+
+    public function render_display_mode_field($args) {
+        $option = $args['label_for'];
+        $value = get_option($option, 'overlay');
+        ?>
+        <select id="<?php echo esc_attr($option); ?>" name="<?php echo esc_attr($option); ?>">
+            <option value="overlay" <?php selected($value, 'overlay'); ?>>Overlay (Modal)</option>
+            <option value="inline" <?php selected($value, 'inline'); ?>>Inline (Under Button)</option>
+        </select>
+        <p class="description">Choose how the distributor stock data should be displayed when the "Buy Now" button is clicked.</p>
+        <?php
     }
 
     public function render_color_field($args) {

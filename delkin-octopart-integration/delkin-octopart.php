@@ -51,12 +51,13 @@ function delkin_octopart_enqueue_scripts() {
 
     // Localize the script with the REST API URL, nonce, and styling/column settings
     wp_localize_script( 'delkin-octopart-js', 'delkinOctopartData', array(
-        'root'    => esc_url_raw( rest_url() ),
-        'nonce'   => wp_create_nonce( 'wp_rest' ),
-        'columns' => get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock')),
-        'styling' => array(
+        'root'        => esc_url_raw( rest_url() ),
+        'nonce'       => wp_create_nonce( 'wp_rest' ),
+        'displayMode' => get_option('nexar_display_mode', 'overlay'),
+        'columns'     => get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock')),
+        'styling'     => array(
             'btnText'    => get_option('nexar_button_text', 'Buy Now'),
-            'modalTitle' => get_option('nexar_modal_title', 'Authorized Distributors'),
+            'modalTitle' => get_option('nexar_modal_title', 'Delkin Authorized Distributors'),
             'btnBgColor' => get_option('nexar_button_bg_color', '#02549c'),
             'btnColor'   => get_option('nexar_button_text_color', '#ffffff'),
             'btnIcon'    => get_option('nexar_button_icon', ''),
@@ -64,6 +65,19 @@ function delkin_octopart_enqueue_scripts() {
     ) );
 }
 add_action( 'wp_enqueue_scripts', 'delkin_octopart_enqueue_scripts' );
+
+/**
+ * Adds attributes to the script tag to prevent WP Rocket from delaying/optimizing our JS.
+ */
+function delkin_octopart_script_loader_tag( $tag, $handle, $src ) {
+    if ( 'delkin-octopart-js' !== $handle ) {
+        return $tag;
+    }
+
+    // Add data-rocketasync="false" and data-nowprocket="true" to the script tag
+    return str_replace( ' src', ' data-rocketasync="false" data-nowprocket="true" src', $tag );
+}
+add_filter( 'script_loader_tag', 'delkin_octopart_script_loader_tag', 10, 3 );
 
 /**
  * Renders the "Buy Now" button and modal placeholder on the product page.
@@ -100,6 +114,7 @@ function delkin_octopart_render_buy_button() {
             <?php echo $btn_icon; ?>
             <span class="delkin-btn-text"><?php echo esc_html( $btn_text ); ?></span>
         </button>
+        <div id="delkin-inline-results-<?php echo esc_attr( sanitize_title( $sku ) ); ?>" class="delkin-inline-results" style="display: none !important;"></div>
     </div>
     <?php
 }
@@ -111,7 +126,7 @@ add_action( 'woocommerce_product_meta_end', 'delkin_octopart_render_buy_button' 
 function delkin_octopart_render_modal() {
     ?>
     <!-- Custom Modal Placeholder -->
-    <div id="delkin-octopart-modal" class="delkin-modal" style="display: none;">
+    <div id="delkin-octopart-modal" class="delkin-modal" style="display: none !important;">
         <div class="delkin-modal-content">
             <span class="delkin-modal-close">&times;</span>
             <div id="delkin-modal-body">

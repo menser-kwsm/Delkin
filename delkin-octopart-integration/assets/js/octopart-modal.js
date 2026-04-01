@@ -1,8 +1,15 @@
 (function() {
     const init = () => {
+        // Handle potential case where the DOM is ready but elements are not found yet
         const modal = document.getElementById('delkin-octopart-modal');
         const modalBody = document.getElementById('delkin-modal-body');
         const closeBtn = document.querySelector('.delkin-modal-close');
+
+        // Safety check for localized data
+        if (typeof delkinOctopartData === 'undefined') {
+            console.warn('Delkin Octopart Integration: Localized data missing.');
+            return;
+        }
 
         // Handle button click
         document.addEventListener('click', (e) => {
@@ -76,13 +83,20 @@
                     return response.json();
                 })
                 .then(data => {
-                    if (!data || data.length === 0) {
+                    if (!data || !Array.isArray(data) || data.length === 0) {
                         container.innerHTML = '<p style="padding: 20px; text-align: center;">No distributors found for this part number.</p>';
                         return;
                     }
 
-                    const columns = delkinOctopartData.columns;
-                    const modalTitle = delkinOctopartData.styling.modalTitle || 'Delkin Authorized Distributors';
+                    // Robust configuration retrieval
+                    const columns = (Array.isArray(delkinOctopartData.columns) && delkinOctopartData.columns.length > 0)
+                                    ? delkinOctopartData.columns
+                                    : ['distributor', 'mpn', 'packaging', 'stock'];
+
+                    const styling = delkinOctopartData.styling || {};
+                    const modalTitle = styling.modalTitle || 'Delkin Authorized Distributors';
+                    const btnBgColor = styling.btnBgColor || '#02549c';
+                    const btnTextColor = styling.btnColor || '#ffffff';
                     const isInline = !modalElement;
 
                     let tableHTML = '';
@@ -115,18 +129,24 @@
                     `;
 
                     data.forEach(item => {
-                        const stockText = item.stock > 0 ? item.stock : '0';
-                        const buyButton = item.stock > 0
-                            ? `<a href="${item.url}" target="_blank" class="octo-buy-btn" style="background-color: ${delkinOctopartData.styling.btnBgColor}; color: ${delkinOctopartData.styling.btnColor};">Buy</a>`
+                        const stockVal = (typeof item.stock !== 'undefined' && item.stock !== null) ? item.stock : 0;
+                        const stockText = stockVal > 0 ? stockVal : '0';
+                        const url = item.url || '#';
+                        const distributor = item.distributor || 'Unknown';
+                        const mpn = item.mpn || 'N/A';
+                        const packaging = item.packaging || 'N/A';
+
+                        const buyButton = stockVal > 0
+                            ? `<a href="${url}" target="_blank" class="octo-buy-btn" style="background-color: ${btnBgColor}; color: ${btnTextColor};">Buy</a>`
                             : `<button disabled class="octo-buy-btn disabled">Buy</button>`;
 
                         const distributorEscaped = document.createElement('div');
-                        distributorEscaped.textContent = item.distributor;
+                        distributorEscaped.textContent = distributor;
 
                         tableHTML += `<tr>`;
                         if (columns.includes('distributor')) tableHTML += `<td>${distributorEscaped.innerHTML}</td>`;
-                        if (columns.includes('mpn'))         tableHTML += `<td>${item.mpn}</td>`;
-                        if (columns.includes('packaging'))   tableHTML += `<td>${item.packaging}</td>`;
+                        if (columns.includes('mpn'))         tableHTML += `<td>${mpn}</td>`;
+                        if (columns.includes('packaging'))   tableHTML += `<td>${packaging}</td>`;
                         if (columns.includes('stock'))       tableHTML += `<td>${stockText}</td>`;
                         tableHTML += `<td style="text-align: right;">${buyButton}</td>`;
                         tableHTML += `</tr>`;

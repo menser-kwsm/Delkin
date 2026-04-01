@@ -49,17 +49,30 @@ function delkin_octopart_enqueue_scripts() {
         true // Load in footer
     );
 
+    $btn_text     = get_option('nexar_button_text', 'Buy Now');
+    $modal_title  = get_option('nexar_modal_title', 'Delkin Authorized Distributors');
+    $btn_bg       = get_option('nexar_button_bg_color', '#02549c');
+    $btn_color    = get_option('nexar_button_text_color', '#ffffff');
+    $columns      = get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock'));
+
+    // Ensure we have defaults if options are empty
+    if ( empty($btn_text) || ! is_string($btn_text) || trim($btn_text) === '' ) $btn_text = 'Buy Now';
+    if ( empty($modal_title) || ! is_string($modal_title) || trim($modal_title) === '' ) $modal_title = 'Delkin Authorized Distributors';
+    if ( empty($btn_bg) || ! is_string($btn_bg) || trim($btn_bg) === '' ) $btn_bg = '#02549c';
+    if ( empty($btn_color) || ! is_string($btn_color) || trim($btn_color) === '' ) $btn_color = '#ffffff';
+    if ( empty($columns) || ! is_array($columns) ) $columns = array('distributor', 'mpn', 'packaging', 'stock');
+
     // Localize the script with the REST API URL, nonce, and styling/column settings
     wp_localize_script( 'delkin-octopart-js', 'delkinOctopartData', array(
         'root'        => esc_url_raw( rest_url() ),
         'nonce'       => wp_create_nonce( 'wp_rest' ),
         'displayMode' => get_option('nexar_display_mode', 'overlay'),
-        'columns'     => get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock')),
+        'columns'     => $columns,
         'styling'     => array(
-            'btnText'    => get_option('nexar_button_text', 'Buy Now'),
-            'modalTitle' => get_option('nexar_modal_title', 'Delkin Authorized Distributors'),
-            'btnBgColor' => get_option('nexar_button_bg_color', '#02549c'),
-            'btnColor'   => get_option('nexar_button_text_color', '#ffffff'),
+            'btnText'    => $btn_text,
+            'modalTitle' => $modal_title,
+            'btnBgColor' => $btn_bg,
+            'btnColor'   => $btn_color,
             'btnIcon'    => get_option('nexar_button_icon', ''),
         )
     ) );
@@ -99,6 +112,11 @@ function delkin_octopart_render_buy_button() {
     $btn_bg       = get_option('nexar_button_bg_color', '#02549c');
     $btn_color    = get_option('nexar_button_text_color', '#ffffff');
     $btn_icon_raw = get_option('nexar_button_icon', '');
+
+    // Robust fallbacks
+    if ( empty($btn_text) || ! is_string($btn_text) || trim($btn_text) === '' ) $btn_text = 'Buy Now';
+    if ( empty($btn_bg) || ! is_string($btn_bg) || trim($btn_bg) === '' )   $btn_bg = '#02549c';
+    if ( empty($btn_color) || ! is_string($btn_color) || trim($btn_color) === '' ) $btn_color = '#ffffff';
 
     $btn_icon = '';
     if ( ! empty( $btn_icon_raw ) ) {

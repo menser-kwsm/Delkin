@@ -11,25 +11,45 @@
 
         // 1. Linkify SKUs in plain text if enabled
         if (delkinOctopartData.skuLinking) {
+            // Initial run
             linkifySkus(document.body);
 
-            // Set up an observer to linkify dynamically loaded content (e.g. AJAX tabs, lazy loading)
+            // Set up an observer to linkify dynamically loaded content (e.g. TablePress, Elementor, lazy loading)
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach(mutation => {
+                    // Handle added elements
                     mutation.addedNodes.forEach(node => {
                         if (node.nodeType === 1) { // Element node
-                            // Don't re-process the modal or its content
-                            if (node.id === 'delkin-octopart-modal' || node.closest('#delkin-octopart-modal')) return;
+                            if (isProtected(node)) return;
                             linkifySkus(node);
+                        } else if (node.nodeType === 3) { // Text node
+                            if (isProtected(node.parentElement)) return;
+                            linkifySkus(node.parentElement);
                         }
                     });
+
+                    // Handle text changes (some AJAX updates just change text)
+                    if (mutation.type === 'characterData') {
+                        if (isProtected(mutation.target.parentElement)) return;
+                        linkifySkus(mutation.target.parentElement);
+                    }
                 });
             });
 
             observer.observe(document.body, {
                 childList: true,
-                subtree: true
+                subtree: true,
+                characterData: true
             });
+        }
+
+        function isProtected(element) {
+            if (!element) return true;
+            const skipTags = ['A', 'BUTTON', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT'];
+            if (skipTags.includes(element.tagName)) return true;
+            if (element.id === 'delkin-octopart-modal' || element.closest('#delkin-octopart-modal')) return true;
+            if (element.classList.contains('delkin-sku-link')) return true;
+            return false;
         }
 
         // Handle button click (and SKU link clicks)
@@ -85,16 +105,16 @@
         });
 
         function linkifySkus(rootNode) {
-            // Updated Regex: Handles common SKU patterns like SE12TLKFX-1D000-3 or SE32TRDMH-U1000-D
-            // Matches: alphanumeric (3+), dash, alphanumeric (3+), dash, alphanumeric (1+)
-            const skuRegex = /\b([A-Z0-9]{3,}-[A-Z0-9]{3,}-[A-Z0-9]{1,})\b/g;
-            const skipTags = ['A', 'BUTTON', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT'];
+            if (!rootNode) return;
 
-            // Fast check for text nodes containing something like a SKU
+            // Flexible Regex: Handles alphanumeric segments separated by various dash types (standard, minus, en-dash, em-dash)
+            // Matches: segment (2+), dash, segment (2+), dash, segment (1+)
+            // Example: DE32TNKNE-35000-D
+            const skuRegex = /\b([a-z0-9]{2,}[-−–—][a-z0-9]{2,}[-−–—][a-z0-9]+)\b/gi;
+
             const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
                 acceptNode: (node) => {
-                    if (skipTags.includes(node.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
-                    if (node.parentElement.classList.contains('delkin-sku-link')) return NodeFilter.FILTER_REJECT;
+                    if (isProtected(node.parentElement)) return NodeFilter.FILTER_REJECT;
                     return NodeFilter.FILTER_ACCEPT;
                 }
             });
@@ -105,27 +125,28 @@
                 if (skuRegex.test(currentNode.nodeValue)) {
                     nodesToProcess.push(currentNode);
                 }
-                skuRegex.lastIndex = 0; // reset regex
+                skuRegex.lastIndex = 0; // reset
             }
 
             nodesToProcess.forEach(node => {
                 const parent = node.parentNode;
                 if (!parent) return;
 
-                const parts = node.nodeValue.split(skuRegex);
+                const text = node.nodeValue;
+                const parts = text.split(skuRegex);
                 const fragment = document.createDocumentFragment();
 
-                parts.forEach((part, i) => {
-                    if (i % 2 === 1) { // This is a SKU match
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 1) { // Match
                         const span = document.createElement('span');
                         span.className = 'delkin-sku-link';
-                        span.setAttribute('data-sku', part);
-                        span.textContent = part;
+                        span.setAttribute('data-sku', parts[i].toUpperCase());
+                        span.textContent = parts[i];
                         fragment.appendChild(span);
-                    } else {
-                        if (part) fragment.appendChild(document.createTextNode(part));
+                    } else if (parts[i]) {
+                        fragment.appendChild(document.createTextNode(parts[i]));
                     }
-                });
+                }
 
                 parent.replaceChild(fragment, node);
             });

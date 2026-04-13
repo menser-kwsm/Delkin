@@ -36,6 +36,18 @@
     fill: currentColor;
 }
 
+/* SKU Link Styling */
+.delkin-sku-link {
+    color: #02549c;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: bold;
+    transition: color 0.2s;
+}
+.delkin-sku-link:hover {
+    color: #003a6d;
+}
+
 /* Modal Styling */
 .delkin-modal {
     display: none !important;

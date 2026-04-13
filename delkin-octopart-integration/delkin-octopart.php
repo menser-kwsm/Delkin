@@ -62,12 +62,33 @@ function delkin_octopart_enqueue_scripts() {
     if ( empty($btn_color) || ! is_string($btn_color) || trim($btn_color) === '' ) $btn_color = '#ffffff';
     if ( empty($columns) || ! is_array($columns) ) $columns = array('distributor', 'mpn', 'packaging', 'stock');
 
+    // Handle SKU Linkification settings
+    $sku_linking_enabled = get_option('nexar_sku_linking_enabled', false);
+    $sku_linking_urls = get_option('nexar_sku_linking_urls', '');
+
+    $should_linkify = false;
+    if ($sku_linking_enabled) {
+        if (empty($sku_linking_urls)) {
+            $should_linkify = true;
+        } else {
+            $current_url = $_SERVER['REQUEST_URI'];
+            $allowed_urls = array_map('trim', explode("\n", $sku_linking_urls));
+            foreach ($allowed_urls as $url) {
+                if (!empty($url) && strpos($current_url, $url) !== false) {
+                    $should_linkify = true;
+                    break;
+                }
+            }
+        }
+    }
+
     // Localize the script with the REST API URL, nonce, and styling/column settings
     wp_localize_script( 'delkin-octopart-js', 'delkinOctopartData', array(
         'root'        => esc_url_raw( rest_url() ),
         'nonce'       => wp_create_nonce( 'wp_rest' ),
         'displayMode' => get_option('nexar_display_mode', 'overlay'),
         'columns'     => $columns,
+        'skuLinking'  => $should_linkify,
         'styling'     => array(
             'btnText'    => $btn_text,
             'modalTitle' => $modal_title,

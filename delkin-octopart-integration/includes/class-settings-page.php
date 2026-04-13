@@ -7,6 +7,7 @@ class Delkin_Octopart_Settings {
 
     private $api_option_group = 'delkin_octopart_api_group';
     private $styling_option_group = 'delkin_octopart_styling_group';
+    private $linking_option_group = 'delkin_octopart_linking_group';
 
     public function init() {
         add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
@@ -60,6 +61,14 @@ class Delkin_Octopart_Settings {
         add_settings_field('nexar_button_text_color', 'Button Text Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_text_color'));
         add_settings_field('nexar_button_icon', 'Button Icon (SVG or Dashicon class)', array( $this, 'render_icon_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_icon'));
         add_settings_field('nexar_table_columns', 'Table Columns', array( $this, 'render_columns_field' ), 'delkin-octopart-styling', 'nexar_styling_section');
+
+        // --- SKU LINKING TAB ---
+        register_setting( $this->linking_option_group, 'nexar_sku_linking_enabled', array('type' => 'boolean', 'default' => false) );
+        register_setting( $this->linking_option_group, 'nexar_sku_linking_urls', 'sanitize_textarea_field' );
+
+        add_settings_section('nexar_linking_section', 'SKU Linkification Settings', null, 'delkin-octopart-linking');
+        add_settings_field('nexar_sku_linking_enabled', 'Enable SKU Linkification', array( $this, 'render_checkbox_field' ), 'delkin-octopart-linking', 'nexar_linking_section', array('label_for' => 'nexar_sku_linking_enabled'));
+        add_settings_field('nexar_sku_linking_urls', 'URL Filters', array( $this, 'render_textarea_field' ), 'delkin-octopart-linking', 'nexar_linking_section', array('label_for' => 'nexar_sku_linking_urls'));
     }
 
     public function render_api_section_info() {
@@ -205,6 +214,20 @@ class Delkin_Octopart_Settings {
         echo '<p class="description">Paste SVG code or enter a WordPress Dashicon class (e.g., dashicons-cart).</p>';
     }
 
+    public function render_checkbox_field($args) {
+        $option = $args['label_for'];
+        $value = get_option($option, false);
+        echo '<input type="checkbox" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="1" ' . checked(1, $value, false) . '>';
+        echo '<p class="description">If enabled, any plain text matching the SKU pattern will be turned into a clickable link that opens the stock data popup.</p>';
+    }
+
+    public function render_textarea_field($args) {
+        $option = $args['label_for'];
+        $value = get_option($option, '');
+        echo '<textarea id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" class="large-text" rows="5">' . esc_textarea($value) . '</textarea>';
+        echo '<p class="description">Enter relative URL paths (one per line) where SKU linkification should be active (e.g., <code>/products/</code>). Leave empty to enable site-wide.</p>';
+    }
+
     public function render_columns_field() {
         $columns = get_option('nexar_table_columns', array('distributor', 'mpn', 'packaging', 'stock'));
 
@@ -239,6 +262,7 @@ class Delkin_Octopart_Settings {
             <h2 class="nav-tab-wrapper">
                 <a href="?page=delkin-octopart&tab=api" class="nav-tab <?php echo $active_tab == 'api' ? 'nav-tab-active' : ''; ?>">Backend API Settings</a>
                 <a href="?page=delkin-octopart&tab=styling" class="nav-tab <?php echo $active_tab == 'styling' ? 'nav-tab-active' : ''; ?>">Front End Styling</a>
+                <a href="?page=delkin-octopart&tab=linking" class="nav-tab <?php echo $active_tab == 'linking' ? 'nav-tab-active' : ''; ?>">SKU Linking</a>
             </h2>
 
             <form action="options.php" method="post">
@@ -246,9 +270,12 @@ class Delkin_Octopart_Settings {
                 if ($active_tab == 'api') {
                     settings_fields( $this->api_option_group );
                     do_settings_sections( 'delkin-octopart-api' );
-                } else {
+                } elseif ($active_tab == 'styling') {
                     settings_fields( $this->styling_option_group );
                     do_settings_sections( 'delkin-octopart-styling' );
+                } else {
+                    settings_fields( $this->linking_option_group );
+                    do_settings_sections( 'delkin-octopart-linking' );
                 }
                 submit_button();
                 ?>

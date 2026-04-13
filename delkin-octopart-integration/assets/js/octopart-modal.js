@@ -11,14 +11,23 @@
             return;
         }
 
-        // Handle button click
+        // 1. Linkify SKUs in plain text if enabled
+        if (delkinOctopartData.skuLinking) {
+            linkifySkus(document.body);
+        }
+
+        // Handle button click (and SKU link clicks)
         document.addEventListener('click', (e) => {
-            const triggerBtn = e.target.closest('.delkin-buy-now-btn');
+            const triggerBtn = e.target.closest('.delkin-buy-now-btn, .delkin-sku-link');
             if (triggerBtn) {
                 const sku = triggerBtn.getAttribute('data-sku');
                 if (sku) {
                     const displayMode = delkinOctopartData.displayMode || 'overlay';
-                    if (displayMode === 'inline') {
+
+                    // Linkified SKUs always use overlay modal to avoid layout breaking in tables
+                    const forceModal = triggerBtn.classList.contains('delkin-sku-link');
+
+                    if (displayMode === 'inline' && !forceModal) {
                         // Sanitize SKU to match the ID generated in PHP (using sanitize_title)
                         const sanitizedSku = sku.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                         const inlineContainer = document.getElementById(`delkin-inline-results-${sanitizedSku}`);
@@ -62,6 +71,36 @@
                 }
             }
         });
+
+        function linkifySkus(node) {
+            // SKU Pattern: Matches something like SE12TLKFX-1D000-3
+            // At least 5 chars, dash, at least 5 chars, dash, at least 1 char
+            const skuRegex = /\b([A-Z0-9]{5,}-[A-Z0-9]{5,}-[A-Z0-9]{1,})\b/g;
+
+            // Nodes to skip
+            const skipTags = ['A', 'BUTTON', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT'];
+            if (node.id === 'delkin-octopart-modal') return;
+
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) => {
+                    if (skipTags.includes(n.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+
+            const textNodes = [];
+            while(walker.nextNode()) textNodes.push(walker.currentNode);
+
+            textNodes.forEach(textNode => {
+                const text = textNode.nodeValue;
+                if (skuRegex.test(text)) {
+                    skuRegex.lastIndex = 0; // Reset regex
+                    const span = document.createElement('span');
+                    span.innerHTML = text.replace(skuRegex, '<span class="delkin-sku-link" data-sku="$1">$1</span>');
+                    textNode.parentNode.replaceChild(span, textNode);
+                }
+            });
+        }
 
         function openResults(sku, container, modalElement = null) {
             if (modalElement) {

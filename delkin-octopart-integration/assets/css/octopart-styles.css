@@ -38,14 +38,11 @@
 
 /* SKU Link Styling */
 .delkin-sku-link {
-    color: #02549c;
-    text-decoration: underline;
     cursor: pointer;
-    font-weight: bold;
-    transition: color 0.2s;
+    transition: opacity 0.2s;
 }
 .delkin-sku-link:hover {
-    color: #003a6d;
+    opacity: 0.8;
 }
 
 /* Modal Styling */

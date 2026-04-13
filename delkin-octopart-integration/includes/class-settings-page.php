@@ -62,6 +62,16 @@ class Delkin_Octopart_Settings {
         add_settings_field('nexar_button_icon', 'Button Icon (SVG or Dashicon class)', array( $this, 'render_icon_field' ), 'delkin-octopart-styling', 'nexar_styling_section', array('label_for' => 'nexar_button_icon'));
         add_settings_field('nexar_table_columns', 'Table Columns', array( $this, 'render_columns_field' ), 'delkin-octopart-styling', 'nexar_styling_section');
 
+        // SKU Linking Styling Section
+        register_setting( $this->styling_option_group, 'nexar_sku_link_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
+        register_setting( $this->styling_option_group, 'nexar_sku_link_underline', array('type' => 'boolean', 'default' => true) );
+        register_setting( $this->styling_option_group, 'nexar_sku_link_bold', array('type' => 'boolean', 'default' => true) );
+        register_setting( $this->styling_option_group, 'nexar_sku_link_italic', array('type' => 'boolean', 'default' => false) );
+
+        add_settings_section('nexar_link_styling_section', 'SKU Linking Styling', null, 'delkin-octopart-styling');
+        add_settings_field('nexar_sku_link_color', 'Link Color', array( $this, 'render_color_field' ), 'delkin-octopart-styling', 'nexar_link_styling_section', array('label_for' => 'nexar_sku_link_color'));
+        add_settings_field('nexar_sku_link_decoration', 'Link Decoration', array( $this, 'render_link_decoration_fields' ), 'delkin-octopart-styling', 'nexar_link_styling_section');
+
         // --- SKU LINKING TAB ---
         register_setting( $this->linking_option_group, 'nexar_sku_linking_enabled', array('type' => 'boolean', 'default' => false) );
         register_setting( $this->linking_option_group, 'nexar_sku_linking_urls', 'sanitize_textarea_field' );
@@ -258,6 +268,16 @@ class Delkin_Octopart_Settings {
         $value = get_option($option, false);
         echo '<input type="checkbox" id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" value="1" ' . checked(1, $value, false) . '>';
         echo '<p class="description">If enabled, any plain text matching the SKU pattern will be turned into a clickable link that opens the stock data popup.</p>';
+    }
+
+    public function render_link_decoration_fields() {
+        $underline = get_option('nexar_sku_link_underline', true);
+        $bold      = get_option('nexar_sku_link_bold', true);
+        $italic    = get_option('nexar_sku_link_italic', false);
+
+        echo '<label><input type="checkbox" name="nexar_sku_link_underline" value="1" ' . checked(1, $underline, false) . '> Underline</label><br>';
+        echo '<label><input type="checkbox" name="nexar_sku_link_bold" value="1" ' . checked(1, $bold, false) . '> Bold</label><br>';
+        echo '<label><input type="checkbox" name="nexar_sku_link_italic" value="1" ' . checked(1, $italic, false) . '> Italic</label>';
     }
 
     public function render_textarea_field($args) {

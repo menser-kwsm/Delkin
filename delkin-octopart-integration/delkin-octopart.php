@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Delkin Octopart Integration
  * Description: Integrates WooCommerce with the Nexar (Octopart) API to fetch real-time distributor stock and purchase links.
- * Version: 1.4.0
+ * Version: 1.5.0
  * Author: KWSM: a digital marketing agency
  * Author URI: https://kwsmdigital.com/
  * Text Domain: delkin-octopart
@@ -45,7 +45,7 @@ function delkin_octopart_enqueue_scripts() {
         'delkin-octopart-js',
         plugins_url( '/assets/js/octopart-modal.js', __FILE__ ),
         array( 'jquery' ),
-        '1.3.2',
+        '1.4.0',
         true // Load in footer
     );
 
@@ -99,6 +99,30 @@ function delkin_octopart_enqueue_scripts() {
     ) );
 }
 add_action( 'wp_enqueue_scripts', 'delkin_octopart_enqueue_scripts' );
+
+/**
+ * Injects dynamic CSS for SKU Linkification styling.
+ */
+function delkin_octopart_inject_custom_styles() {
+    $sku_color     = get_option('nexar_sku_link_color', '#02549c');
+    $sku_underline = get_option('nexar_sku_link_underline', true);
+    $sku_bold      = get_option('nexar_sku_link_bold', true);
+    $sku_italic    = get_option('nexar_sku_link_italic', false);
+
+    // Robust fallbacks
+    if ( empty($sku_color) || ! is_string($sku_color) || trim($sku_color) === '' ) $sku_color = '#02549c';
+
+    $css = "
+        .delkin-sku-link {
+            color: " . esc_attr($sku_color) . " !important;
+            text-decoration: " . ($sku_underline ? 'underline' : 'none') . " !important;
+            font-weight: " . ($sku_bold ? 'bold' : 'normal') . " !important;
+            font-style: " . ($sku_italic ? 'italic' : 'normal') . " !important;
+        }
+    ";
+    echo '<style id="delkin-octopart-custom-css">' . $css . '</style>';
+}
+add_action( 'wp_head', 'delkin_octopart_inject_custom_styles' );
 
 /**
  * Adds attributes to the script tag to prevent WP Rocket from delaying/optimizing our JS.

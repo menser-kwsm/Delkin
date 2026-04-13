@@ -1,0 +1,48 @@
+.delkin-seller-selection-container {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    max-width: 800px;
+}
+.delkin-seller-box-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.delkin-seller-box {
+    border: 1px solid #ccc;
+    background: #fff;
+    height: 300px;
+    overflow-y: auto;
+    padding: 5px;
+    margin-top: 5px;
+}
+.delkin-seller-item {
+    padding: 5px 10px;
+    margin-bottom: 2px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+.delkin-seller-item:hover {
+    background: #f0f0f0;
+}
+.delkin-remove-seller {
+    color: #d63638;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+.delkin-remove-seller:hover {
+    color: #a00;
+}
+#delkin-available-sellers .delkin-seller-item::after {
+    content: '+';
+    margin-left: auto;
+    color: #46b450;
+    font-weight: bold;
+}

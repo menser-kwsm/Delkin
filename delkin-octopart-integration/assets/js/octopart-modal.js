@@ -9,29 +9,89 @@
             return;
         }
 
+        const skuRegex = /\b([a-z0-9]{2,}(?:[-−–—][a-z0-9]{2,})*(?:[-−–—][a-z0-9]+))\b/gi;
+        const skipTags = ['A', 'BUTTON', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT'];
+
+        function isProtected(element) {
+            if (!element || element.nodeType !== 1) return true;
+            if (skipTags.includes(element.tagName)) return true;
+            if (element.closest('.delkin-sku-link, #delkin-octopart-modal, .delkin-buy-now-btn')) return true;
+            return false;
+        }
+
+        function linkifySkus(rootNode) {
+            if (!rootNode) return;
+
+            const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) => {
+                    if (isProtected(node.parentElement)) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+
+            const nodesToProcess = [];
+            let currentNode;
+            while (currentNode = walker.nextNode()) {
+                // Quick check to avoid regex state issues in the loop
+                if (/[a-z0-9]{2,}[-−–—][a-z0-9]{2,}[-−–—][a-z0-9]+/i.test(currentNode.nodeValue)) {
+                    nodesToProcess.push(currentNode);
+                }
+            }
+
+            nodesToProcess.forEach(node => {
+                const parent = node.parentNode;
+                if (!parent) return;
+
+                const text = node.nodeValue;
+                const fragment = document.createDocumentFragment();
+
+                // Reset regex state for each node
+                skuRegex.lastIndex = 0;
+                const parts = text.split(skuRegex);
+
+                let hasMatches = false;
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 1) { // Captured group match
+                        hasMatches = true;
+                        const span = document.createElement('span');
+                        span.className = 'delkin-sku-link';
+                        span.setAttribute('data-sku', parts[i].toUpperCase().trim());
+                        span.textContent = parts[i];
+                        fragment.appendChild(span);
+                    } else if (parts[i]) {
+                        fragment.appendChild(document.createTextNode(parts[i]));
+                    }
+                }
+
+                if (hasMatches) {
+                    parent.replaceChild(fragment, node);
+                }
+            });
+        }
+
         // 1. Linkify SKUs in plain text if enabled
         if (delkinOctopartData.skuLinking) {
-            // Initial run
-            linkifySkus(document.body);
+            console.log('Delkin SKU Linking: Enabled');
 
-            // Set up an observer to linkify dynamically loaded content (e.g. TablePress, Elementor, lazy loading)
+            // Initial run and delayed runs for slow-loading widgets
+            linkifySkus(document.body);
+            setTimeout(() => linkifySkus(document.body), 1000);
+            setTimeout(() => linkifySkus(document.body), 3000);
+
+            // MutationObserver for dynamic content
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach(mutation => {
-                    // Handle added elements
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) { // Element node
-                            if (isProtected(node)) return;
-                            linkifySkus(node);
-                        } else if (node.nodeType === 3) { // Text node
-                            if (isProtected(node.parentElement)) return;
-                            linkifySkus(node.parentElement);
-                        }
-                    });
-
-                    // Handle text changes (some AJAX updates just change text)
-                    if (mutation.type === 'characterData') {
-                        if (isProtected(mutation.target.parentElement)) return;
-                        linkifySkus(mutation.target.parentElement);
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                if (!isProtected(node)) linkifySkus(node);
+                            } else if (node.nodeType === 3) {
+                                if (!isProtected(node.parentElement)) linkifySkus(node.parentElement);
+                            }
+                        });
+                    } else if (mutation.type === 'characterData') {
+                        const parent = mutation.target.parentElement;
+                        if (parent && !isProtected(parent)) linkifySkus(parent);
                     }
                 });
             });
@@ -43,15 +103,6 @@
             });
         }
 
-        function isProtected(element) {
-            if (!element) return true;
-            const skipTags = ['A', 'BUTTON', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT'];
-            if (skipTags.includes(element.tagName)) return true;
-            if (element.id === 'delkin-octopart-modal' || element.closest('#delkin-octopart-modal')) return true;
-            if (element.classList.contains('delkin-sku-link')) return true;
-            return false;
-        }
-
         // Handle button click (and SKU link clicks)
         document.addEventListener('click', (e) => {
             const triggerBtn = e.target.closest('.delkin-buy-now-btn, .delkin-sku-link');
@@ -59,6 +110,8 @@
                 const sku = triggerBtn.getAttribute('data-sku');
                 if (sku) {
                     const displayMode = delkinOctopartData.displayMode || 'overlay';
+
+                    // Linkified SKUs always use overlay modal to avoid layout breaking in tables
                     const forceModal = triggerBtn.classList.contains('delkin-sku-link');
 
                     if (displayMode === 'inline' && !forceModal) {
@@ -103,54 +156,6 @@
                 }
             }
         });
-
-        function linkifySkus(rootNode) {
-            if (!rootNode) return;
-
-            // Flexible Regex: Handles alphanumeric segments separated by various dash types (standard, minus, en-dash, em-dash)
-            // Matches: segment (2+), dash, segment (2+), dash, segment (1+)
-            // Example: DE32TNKNE-35000-D
-            const skuRegex = /\b([a-z0-9]{2,}[-−–—][a-z0-9]{2,}[-−–—][a-z0-9]+)\b/gi;
-
-            const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
-                acceptNode: (node) => {
-                    if (isProtected(node.parentElement)) return NodeFilter.FILTER_REJECT;
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-            });
-
-            const nodesToProcess = [];
-            let currentNode;
-            while (currentNode = walker.nextNode()) {
-                if (skuRegex.test(currentNode.nodeValue)) {
-                    nodesToProcess.push(currentNode);
-                }
-                skuRegex.lastIndex = 0; // reset
-            }
-
-            nodesToProcess.forEach(node => {
-                const parent = node.parentNode;
-                if (!parent) return;
-
-                const text = node.nodeValue;
-                const parts = text.split(skuRegex);
-                const fragment = document.createDocumentFragment();
-
-                for (let i = 0; i < parts.length; i++) {
-                    if (i % 2 === 1) { // Match
-                        const span = document.createElement('span');
-                        span.className = 'delkin-sku-link';
-                        span.setAttribute('data-sku', parts[i].toUpperCase());
-                        span.textContent = parts[i];
-                        fragment.appendChild(span);
-                    } else if (parts[i]) {
-                        fragment.appendChild(document.createTextNode(parts[i]));
-                    }
-                }
-
-                parent.replaceChild(fragment, node);
-            });
-        }
 
         function openResults(sku, container, modalElement = null) {
             if (modalElement) {
@@ -233,7 +238,7 @@
                         tableHTML += `<tr>`;
                         if (columns.includes('distributor')) tableHTML += `<td>${distributorEscaped.innerHTML}</td>`;
                         if (columns.includes('mpn'))         tableHTML += `<td>${mpn}</td>`;
-                        if (columns.includes('packaging'))   tableHTML += `<td>${packaging}</td>`;
+                        if (columns.includes('packaging'))   tableHTML += `<td>${item.packaging}</td>`;
                         if (columns.includes('stock'))       tableHTML += `<td>${stockText}</td>`;
                         tableHTML += `<td style="text-align: right;">${buyButton}</td>`;
                         tableHTML += `</tr>`;

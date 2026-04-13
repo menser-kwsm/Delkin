@@ -45,7 +45,7 @@ function delkin_octopart_enqueue_scripts() {
         'delkin-octopart-js',
         plugins_url( '/assets/js/octopart-modal.js', __FILE__ ),
         array( 'jquery' ),
-        '1.2.0',
+        '1.3.2',
         true // Load in footer
     );
 

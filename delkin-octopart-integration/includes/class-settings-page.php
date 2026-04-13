@@ -50,7 +50,7 @@ class Delkin_Octopart_Settings {
         register_setting( $this->styling_option_group, 'nexar_display_mode', array('sanitize_callback' => 'sanitize_text_field', 'default' => 'overlay') );
         register_setting( $this->styling_option_group, 'nexar_button_bg_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#02549c') );
         register_setting( $this->styling_option_group, 'nexar_button_text_color', array('sanitize_callback' => 'sanitize_hex_color', 'default' => '#ffffff') );
-        register_setting( $this->styling_option_group, 'nexar_button_icon', 'sanitize_textarea_field' ); // Allow SVG
+        register_setting( $this->styling_option_group, 'nexar_button_icon', array('sanitize_callback' => array( $this, 'sanitize_icon' ) ) ); // Allow SVG securely
         register_setting( $this->styling_option_group, 'nexar_table_columns', array('type' => 'array', 'default' => array('distributor', 'mpn', 'packaging', 'stock')) );
 
         add_settings_section('nexar_styling_section', 'Button & Modal Styling', null, 'delkin-octopart-styling');
@@ -99,6 +99,45 @@ class Delkin_Octopart_Settings {
             return array();
         }
         return array_map( 'sanitize_text_field', $input );
+    }
+
+    /**
+     * Securely sanitizes the button icon field to allow both Dashicons and basic SVG tags.
+     */
+    public function sanitize_icon( $input ) {
+        if ( strpos( $input, '<svg' ) !== false ) {
+            // Define allowed tags and attributes for SVG
+            $allowed_tags = array(
+                'svg' => array(
+                    'xmlns'   => true,
+                    'viewbox' => true,
+                    'width'   => true,
+                    'height'  => true,
+                    'fill'    => true,
+                    'class'   => true,
+                    'style'   => true,
+                ),
+                'path' => array(
+                    'd'    => true,
+                    'fill' => true,
+                ),
+                'circle' => array(
+                    'cx'   => true,
+                    'cy'   => true,
+                    'r'    => true,
+                    'fill' => true,
+                ),
+                'rect' => array(
+                    'x'      => true,
+                    'y'      => true,
+                    'width'  => true,
+                    'height' => true,
+                    'fill'   => true,
+                ),
+            );
+            return wp_kses( $input, $allowed_tags );
+        }
+        return sanitize_text_field( $input );
     }
 
     public function render_approved_sellers_field() {
@@ -225,7 +264,7 @@ class Delkin_Octopart_Settings {
         $option = $args['label_for'];
         $value = get_option($option, '');
         echo '<textarea id="' . esc_attr($option) . '" name="' . esc_attr($option) . '" class="large-text" rows="5">' . esc_textarea($value) . '</textarea>';
-        echo '<p class="description">Enter relative URL paths (one per line) where SKU linkification should be active (e.g., <code>/products/</code>). Leave empty to enable site-wide.</p>';
+        echo '<p class="description">Enter relative URL paths (one per line) where SKU linkification should be active (e.g., <code>/products/</code>). This will automatically include all child pages of that path. No wildcards (like *) are needed. Leave empty to enable site-wide.</p>';
     }
 
     public function render_columns_field() {

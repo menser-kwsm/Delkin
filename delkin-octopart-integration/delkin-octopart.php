@@ -94,7 +94,6 @@ function delkin_octopart_enqueue_scripts() {
             'modalTitle' => $modal_title,
             'btnBgColor' => $btn_bg,
             'btnColor'   => $btn_color,
-            'btnIcon'    => get_option('nexar_button_icon', ''),
         )
     ) );
 }

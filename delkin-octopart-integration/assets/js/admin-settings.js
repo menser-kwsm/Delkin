@@ -31,15 +31,15 @@ jQuery(document).ready(function($) {
             return this.nodeType === 3;
         }).text().trim();
 
-        // Add to selected box
-        $('#delkin-selected-sellers').append(
-            `<div class="delkin-seller-item" data-value="${value}"><span class="delkin-remove-seller">×</span> ${name}</div>`
-        );
+        // Add to selected box using safe DOM manipulation
+        const $newItem = $('<div class="delkin-seller-item"></div>').attr('data-value', value);
+        const $removeBtn = $('<span class="delkin-remove-seller">×</span>');
+        $newItem.append($removeBtn).append(' ').append(document.createTextNode(name));
+        $('#delkin-selected-sellers').append($newItem);
 
         // Add to hidden select
-        $('#nexar-approved-sellers-hidden').append(
-            `<option value="${value}" selected>${name}</option>`
-        );
+        const $newOption = $('<option></option>').val(value).text(name).prop('selected', true);
+        $('#nexar-approved-sellers-hidden').append($newOption);
 
         // Remove from available box
         $item.remove();
@@ -54,13 +54,14 @@ jQuery(document).ready(function($) {
             return this.nodeType === 3;
         }).text().trim();
 
-        // Add back to available box
-        $('#delkin-available-sellers').append(
-            `<div class="delkin-seller-item" data-value="${value}">${name}</div>`
-        );
+        // Add back to available box using safe DOM manipulation
+        const $availableItem = $('<div class="delkin-seller-item"></div>').attr('data-value', value).text(name);
+        $('#delkin-available-sellers').append($availableItem);
 
         // Remove from hidden select
-        $(`#nexar-approved-sellers-hidden option[value="${value}"]`).remove();
+        $('#nexar-approved-sellers-hidden option').filter(function() {
+            return $(this).val() === value;
+        }).remove();
 
         // Remove from selected box
         $item.remove();
